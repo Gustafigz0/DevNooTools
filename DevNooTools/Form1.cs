@@ -16,9 +16,9 @@ namespace DevNooTools
         private ProductRepository repository;
         private BindingList<Product> products;
         private List<Product> allProducts;
-        private const string SearchPlaceholder = "Search products...";
+        private const string SearchPlaceholder = "Buscar produtos...";
         
-        // Euro culture
+        // Euro culture for currency formatting
         private static readonly CultureInfo EuroCulture = new CultureInfo("de-DE");
 
         public Form1()
@@ -38,10 +38,11 @@ namespace DevNooTools
                 
                 UpdateStats();
                 dataGridViewProducts.ClearSelection();
+                ClearFields();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading products: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Erro ao carregar produtos: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 allProducts = new List<Product>();
                 products = new BindingList<Product>();
                 bindingSourceProducts.DataSource = products;
@@ -50,208 +51,138 @@ namespace DevNooTools
 
         private void UpdateStats()
         {
+            // Total products
             labelCardTotalValue.Text = allProducts.Count.ToString();
+            
+            // Total value in stock (Euro)
             decimal totalValue = allProducts.Sum(p => p.Price * p.Quantity);
-            labelCardValueValue.Text = totalValue.ToString("C", EuroCulture);
+            labelCardValueValue.Text = totalValue.ToString("N2", EuroCulture) + " EUR";
+            
+            // Low stock (quantity <= 5)
             int lowStock = allProducts.Count(p => p.Quantity <= 5);
             labelCardLowStockValue.Text = lowStock.ToString();
-        }
-
-        // Button to open Add Product dialog
-        private void btnAddProduct_Click(object sender, EventArgs e)
-        {
-            ShowProductDialog(null);
-        }
-
-        // Double-click to edit
-        private void dataGridViewProducts_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
-        {
-            if (e.RowIndex >= 0 && bindingSourceProducts.Current is Product cur)
-            {
-                ShowProductDialog(cur);
-            }
-        }
-
-        private void ShowProductDialog(Product product)
-        {
-            bool isEdit = product != null;
             
-            using (Form dialog = new Form())
+            // Change color based on low stock
+            if (lowStock > 0)
             {
-                dialog.Text = isEdit ? "Edit Product" : "Add Product";
-                dialog.Size = new Size(420, 520);
-                dialog.StartPosition = FormStartPosition.CenterParent;
-                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
-                dialog.MaximizeBox = false;
-                dialog.MinimizeBox = false;
-                dialog.BackColor = Color.FromArgb(35, 41, 54);
-                dialog.Font = new Font("Segoe UI", 10F);
-
-                Color inputBg = Color.FromArgb(45, 52, 66);
-                Color textColor = Color.White;
-                Color labelColor = Color.FromArgb(156, 163, 175);
-                Color accentGreen = Color.FromArgb(34, 197, 94);
-                Color borderColor = Color.FromArgb(55, 65, 81);
-
-                // Mode label
-                Label lblMode = new Label
-                {
-                    Text = isEdit ? "EDIT MODE" : "ADD MODE",
-                    Location = new Point(20, 20),
-                    AutoSize = true,
-                    ForeColor = accentGreen,
-                    Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                    BackColor = Color.FromArgb(45, 55, 72),
-                    Padding = new Padding(8, 4, 8, 4)
-                };
-
-                // ID field (readonly for edit)
-                Label lblId = new Label { Text = "ID:", Location = new Point(20, 65), AutoSize = true, ForeColor = labelColor };
-                TextBox txtId = new TextBox
-                {
-                    Location = new Point(20, 90),
-                    Size = new Size(360, 30),
-                    BackColor = inputBg,
-                    ForeColor = textColor,
-                    BorderStyle = BorderStyle.FixedSingle,
-                    Text = isEdit ? product.Id.ToString().Substring(0, 8) : Guid.NewGuid().ToString().Substring(0, 8),
-                    ReadOnly = true
-                };
-
-                // Name field
-                Label lblName = new Label { Text = "Name:", Location = new Point(20, 130), AutoSize = true, ForeColor = labelColor };
-                TextBox txtName = new TextBox
-                {
-                    Location = new Point(20, 155),
-                    Size = new Size(360, 30),
-                    BackColor = inputBg,
-                    ForeColor = textColor,
-                    BorderStyle = BorderStyle.FixedSingle,
-                    Text = isEdit ? product.Name : ""
-                };
-
-                // Category field
-                Label lblCategory = new Label { Text = "Category:", Location = new Point(20, 195), AutoSize = true, ForeColor = labelColor };
-                ComboBox cmbCategory = new ComboBox
-                {
-                    Location = new Point(20, 220),
-                    Size = new Size(360, 30),
-                    BackColor = inputBg,
-                    ForeColor = textColor,
-                    FlatStyle = FlatStyle.Flat,
-                    DropDownStyle = ComboBoxStyle.DropDownList
-                };
-                cmbCategory.Items.AddRange(new object[] { "Audio", "Cameras", "Electronics", "Other" });
-                cmbCategory.SelectedIndex = 0;
-
-                // Price field
-                Label lblPrice = new Label { Text = "Price:", Location = new Point(20, 260), AutoSize = true, ForeColor = labelColor };
-                TextBox txtPrice = new TextBox
-                {
-                    Location = new Point(20, 285),
-                    Size = new Size(360, 30),
-                    BackColor = inputBg,
-                    ForeColor = textColor,
-                    BorderStyle = BorderStyle.FixedSingle,
-                    Text = isEdit ? product.Price.ToString("F2", EuroCulture) : ""
-                };
-
-                // Quantity field
-                Label lblQty = new Label { Text = "Quantity:", Location = new Point(20, 325), AutoSize = true, ForeColor = labelColor };
-                TextBox txtQty = new TextBox
-                {
-                    Location = new Point(20, 350),
-                    Size = new Size(360, 30),
-                    BackColor = inputBg,
-                    ForeColor = textColor,
-                    BorderStyle = BorderStyle.FixedSingle,
-                    Text = isEdit ? product.Quantity.ToString() + " units" : ""
-                };
-
-                // Cancel button
-                Button btnCancel = new Button
-                {
-                    Text = "Cancel",
-                    Location = new Point(120, 420),
-                    Size = new Size(100, 40),
-                    FlatStyle = FlatStyle.Flat,
-                    BackColor = Color.FromArgb(55, 65, 81),
-                    ForeColor = textColor,
-                    Cursor = Cursors.Hand
-                };
-                btnCancel.FlatAppearance.BorderSize = 0;
-                btnCancel.Click += (s, ev) => dialog.DialogResult = DialogResult.Cancel;
-
-                // Save button
-                Button btnSave = new Button
-                {
-                    Text = "Save Changes",
-                    Location = new Point(230, 420),
-                    Size = new Size(150, 40),
-                    FlatStyle = FlatStyle.Flat,
-                    BackColor = accentGreen,
-                    ForeColor = textColor,
-                    Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                    Cursor = Cursors.Hand
-                };
-                btnSave.FlatAppearance.BorderSize = 0;
-                btnSave.Click += (s, ev) =>
-                {
-                    if (string.IsNullOrWhiteSpace(txtName.Text))
-                    {
-                        MessageBox.Show("Name is required.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-
-                    decimal price = ParseDecimal(txtPrice.Text.Replace("€", "").Trim());
-                    int qty = ParseInt(txtQty.Text.Replace("units", "").Trim());
-
-                    if (isEdit)
-                    {
-                        product.Name = txtName.Text.Trim();
-                        product.Description = cmbCategory.SelectedItem?.ToString() ?? "";
-                        product.Price = price;
-                        product.Quantity = qty;
-                    }
-                    else
-                    {
-                        var newProduct = new Product
-                        {
-                            Name = txtName.Text.Trim(),
-                            Description = cmbCategory.SelectedItem?.ToString() ?? "",
-                            Price = price,
-                            Quantity = qty
-                        };
-                        allProducts.Add(newProduct);
-                        products.Add(newProduct);
-                    }
-
-                    SaveProducts();
-                    UpdateStats();
-                    bindingSourceProducts.ResetBindings(false);
-                    dialog.DialogResult = DialogResult.OK;
-                };
-
-                dialog.Controls.AddRange(new Control[] {
-                    lblMode, lblId, txtId, lblName, txtName, lblCategory, cmbCategory,
-                    lblPrice, txtPrice, lblQty, txtQty, btnCancel, btnSave
-                });
-
-                dialog.ShowDialog(this);
+                labelCardLowStockValue.ForeColor = Color.FromArgb(239, 68, 68);
             }
+            else
+            {
+                labelCardLowStockValue.ForeColor = Color.FromArgb(34, 197, 94);
+            }
+            
+            // Categories count (unique descriptions)
+            int categories = allProducts.Select(p => p.Description).Distinct().Count();
+            labelCardCategoriesValue.Text = categories.ToString();
+        }
+
+        private void btnAdd_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(textName.Text))
+            {
+                MessageBox.Show("Nome e obrigatorio.", "Validacao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                textName.Focus();
+                return;
+            }
+
+            decimal price = ParseDecimal(textPrice.Text);
+            int qty = ParseInt(textQuantity.Text);
+
+            if (price < 0)
+            {
+                MessageBox.Show("Preco nao pode ser negativo.", "Validacao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                textPrice.Focus();
+                return;
+            }
+
+            if (qty < 0)
+            {
+                MessageBox.Show("Quantidade nao pode ser negativa.", "Validacao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                textQuantity.Focus();
+                return;
+            }
+
+            var p = new Product
+            {
+                Name = textName.Text.Trim(),
+                Description = textDescription.Text?.Trim() ?? string.Empty,
+                Price = price,
+                Quantity = qty
+            };
+
+            allProducts.Add(p);
+            products.Add(p);
+            
+            SaveProducts();
+            UpdateStats();
+            ClearFields();
+            
+            dataGridViewProducts.ClearSelection();
+            int lastRowIndex = dataGridViewProducts.Rows.Count - 1;
+            if (lastRowIndex >= 0)
+            {
+                dataGridViewProducts.Rows[lastRowIndex].Selected = true;
+                dataGridViewProducts.FirstDisplayedScrollingRowIndex = lastRowIndex;
+            }
+
+            MessageBox.Show("Produto adicionado com sucesso!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void btnSave_Click(object sender, EventArgs e)
+        {
+            if (!(bindingSourceProducts.Current is Product cur))
+            {
+                MessageBox.Show("Nenhum produto selecionado.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(textName.Text))
+            {
+                MessageBox.Show("Nome e obrigatorio.", "Validacao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                textName.Focus();
+                return;
+            }
+
+            decimal price = ParseDecimal(textPrice.Text);
+            int qty = ParseInt(textQuantity.Text);
+
+            if (price < 0)
+            {
+                MessageBox.Show("Preco nao pode ser negativo.", "Validacao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                textPrice.Focus();
+                return;
+            }
+
+            if (qty < 0)
+            {
+                MessageBox.Show("Quantidade nao pode ser negativa.", "Validacao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                textQuantity.Focus();
+                return;
+            }
+
+            cur.Name = textName.Text.Trim();
+            cur.Description = textDescription.Text?.Trim() ?? string.Empty;
+            cur.Price = price;
+            cur.Quantity = qty;
+
+            bindingSourceProducts.ResetBindings(false);
+            SaveProducts();
+            UpdateStats();
+            MessageBox.Show("Produto atualizado com sucesso!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void btnDelete_Click(object sender, EventArgs e)
         {
             if (!(bindingSourceProducts.Current is Product cur))
             {
-                MessageBox.Show("No product selected.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Nenhum produto selecionado.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             var res = MessageBox.Show(
-                $"Are you sure you want to delete '{cur.Name}'?\n\nThis action cannot be undone.",
-                "Confirm Delete",
+                $"Tem certeza que deseja excluir o produto '{cur.Name}'?\n\nEsta acao nao pode ser desfeita.",
+                "Confirmar Exclusao",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question,
                 MessageBoxDefaultButton.Button2);
@@ -260,21 +191,40 @@ namespace DevNooTools
             {
                 allProducts.Remove(cur);
                 products.Remove(cur);
+                
                 SaveProducts();
                 UpdateStats();
-                MessageBox.Show("Product deleted successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ClearFields();
+                MessageBox.Show("Produto excluido com sucesso!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
+        }
+
+        private void btnClear_Click(object sender, EventArgs e)
+        {
+            ClearFields();
+            dataGridViewProducts.ClearSelection();
+        }
+
+        private void ClearFields()
+        {
+            textName.Text = string.Empty;
+            textDescription.Text = string.Empty;
+            textPrice.Text = string.Empty;
+            textQuantity.Text = string.Empty;
         }
 
         private void dataGridViewProducts_SelectionChanged(object sender, EventArgs e)
         {
-            // Update hidden fields for compatibility
             if (bindingSourceProducts.Current is Product cur)
             {
                 textName.Text = cur.Name ?? string.Empty;
                 textDescription.Text = cur.Description ?? string.Empty;
                 textPrice.Text = cur.Price.ToString("F2", EuroCulture);
                 textQuantity.Text = cur.Quantity.ToString();
+            }
+            else
+            {
+                ClearFields();
             }
         }
 
@@ -284,7 +234,7 @@ namespace DevNooTools
             if (textSearch.Text == SearchPlaceholder)
             {
                 textSearch.Text = string.Empty;
-                textSearch.ForeColor = Color.White;
+                textSearch.ForeColor = Color.FromArgb(15, 23, 42);
             }
         }
 
@@ -293,7 +243,7 @@ namespace DevNooTools
             if (string.IsNullOrWhiteSpace(textSearch.Text))
             {
                 textSearch.Text = SearchPlaceholder;
-                textSearch.ForeColor = Color.FromArgb(156, 163, 175);
+                textSearch.ForeColor = Color.FromArgb(100, 116, 139);
             }
         }
 
@@ -327,7 +277,7 @@ namespace DevNooTools
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error saving: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Erro ao salvar: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -336,12 +286,14 @@ namespace DevNooTools
             if (string.IsNullOrWhiteSpace(text))
                 return 0m;
 
-            // Remove currency symbols and whitespace
-            text = text.Replace("€", "").Replace("$", "").Trim();
+            // Remove currency symbols
+            text = text.Replace("EUR", "").Replace("E", "").Replace("$", "").Trim();
 
+            // Try parsing with Euro culture first (uses comma as decimal separator)
             if (decimal.TryParse(text, NumberStyles.Any, EuroCulture, out var val))
                 return val;
 
+            // Fallback to invariant culture (uses dot as decimal separator)
             if (decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out val))
                 return val;
 
@@ -353,10 +305,7 @@ namespace DevNooTools
             if (string.IsNullOrWhiteSpace(text))
                 return 0;
 
-            // Remove "units" suffix if present
-            text = text.Replace("units", "").Trim();
-
-            if (int.TryParse(text, out var val))
+            if (int.TryParse(text.Trim(), out var val))
                 return val;
 
             return 0;
