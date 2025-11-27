@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -15,6 +15,8 @@ namespace DevNooTools
     {
         private ProductRepository repository;
         private BindingList<Product> products;
+        private List<Product> allProducts; // For search filtering
+        private const string SearchPlaceholder = "Buscar produtos...";
 
         public Form1()
         {
@@ -27,9 +29,12 @@ namespace DevNooTools
             try
             {
                 repository = new ProductRepository();
-                var list = repository.LoadAll();
-                products = new BindingList<Product>(list);
+                allProducts = repository.LoadAll();
+                products = new BindingList<Product>(allProducts.ToList());
                 bindingSourceProducts.DataSource = products;
+                
+                // Update dashboard stats
+                UpdateStats();
                 
                 // Clear selection initially
                 dataGridViewProducts.ClearSelection();
@@ -38,8 +43,33 @@ namespace DevNooTools
             catch (Exception ex)
             {
                 MessageBox.Show($"Erro ao carregar produtos: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                allProducts = new List<Product>();
                 products = new BindingList<Product>();
                 bindingSourceProducts.DataSource = products;
+            }
+        }
+
+        private void UpdateStats()
+        {
+            // Total products
+            labelCardTotalValue.Text = allProducts.Count.ToString();
+            
+            // Total value in stock
+            decimal totalValue = allProducts.Sum(p => p.Price * p.Quantity);
+            labelCardValueValue.Text = totalValue.ToString("C", new CultureInfo("pt-BR"));
+            
+            // Low stock (quantity <= 5)
+            int lowStock = allProducts.Count(p => p.Quantity <= 5);
+            labelCardLowStockValue.Text = lowStock.ToString();
+            
+            // Change color if there are low stock items
+            if (lowStock > 0)
+            {
+                labelCardLowStockValue.ForeColor = Color.FromArgb(239, 68, 68); // Red
+            }
+            else
+            {
+                labelCardLowStockValue.ForeColor = Color.FromArgb(16, 185, 129); // Green
             }
         }
 
@@ -48,7 +78,7 @@ namespace DevNooTools
             // Validate name (required)
             if (string.IsNullOrWhiteSpace(textName.Text))
             {
-                MessageBox.Show("Nome é obrigatório.", "Validação", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Nome e obrigatorio.", "Validacao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 textName.Focus();
                 return;
             }
@@ -60,14 +90,14 @@ namespace DevNooTools
             // Validate non-negative values
             if (price < 0)
             {
-                MessageBox.Show("Preço não pode ser negativo.", "Validação", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Preco nao pode ser negativo.", "Validacao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 textPrice.Focus();
                 return;
             }
 
             if (qty < 0)
             {
-                MessageBox.Show("Quantidade não pode ser negativa.", "Validação", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Quantidade nao pode ser negativa.", "Validacao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 textQuantity.Focus();
                 return;
             }
@@ -80,8 +110,12 @@ namespace DevNooTools
                 Quantity = qty
             };
 
+            // Add to both lists
+            allProducts.Add(p);
             products.Add(p);
+            
             SaveProducts();
+            UpdateStats();
             ClearFields();
             
             // Select the new item
@@ -107,7 +141,7 @@ namespace DevNooTools
             // Validate name (required)
             if (string.IsNullOrWhiteSpace(textName.Text))
             {
-                MessageBox.Show("Nome é obrigatório.", "Validação", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Nome e obrigatorio.", "Validacao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 textName.Focus();
                 return;
             }
@@ -118,14 +152,14 @@ namespace DevNooTools
             // Validate non-negative values
             if (price < 0)
             {
-                MessageBox.Show("Preço não pode ser negativo.", "Validação", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Preco nao pode ser negativo.", "Validacao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 textPrice.Focus();
                 return;
             }
 
             if (qty < 0)
             {
-                MessageBox.Show("Quantidade não pode ser negativa.", "Validação", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Quantidade nao pode ser negativa.", "Validacao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 textQuantity.Focus();
                 return;
             }
@@ -137,6 +171,7 @@ namespace DevNooTools
 
             bindingSourceProducts.ResetBindings(false);
             SaveProducts();
+            UpdateStats();
             MessageBox.Show("Produto atualizado com sucesso!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
@@ -149,18 +184,22 @@ namespace DevNooTools
             }
 
             var res = MessageBox.Show(
-                $"Tem certeza que deseja excluir o produto '{cur.Name}'?\n\nEsta ação não pode ser desfeita.",
-                "Confirmar Exclusão",
+                $"Tem certeza que deseja excluir o produto '{cur.Name}'?\n\nEsta acao nao pode ser desfeita.",
+                "Confirmar Exclusao",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question,
                 MessageBoxDefaultButton.Button2);
 
             if (res == DialogResult.Yes)
             {
+                // Remove from both lists
+                allProducts.Remove(cur);
                 products.Remove(cur);
+                
                 SaveProducts();
+                UpdateStats();
                 ClearFields();
-                MessageBox.Show("Produto excluído com sucesso!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Produto excluido com sucesso!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
@@ -193,11 +232,59 @@ namespace DevNooTools
             }
         }
 
+        // Search functionality
+        private void textSearch_Enter(object sender, EventArgs e)
+        {
+            if (textSearch.Text == SearchPlaceholder)
+            {
+                textSearch.Text = string.Empty;
+                textSearch.ForeColor = Color.FromArgb(17, 24, 39);
+            }
+        }
+
+        private void textSearch_Leave(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(textSearch.Text))
+            {
+                textSearch.Text = SearchPlaceholder;
+                textSearch.ForeColor = Color.FromArgb(107, 114, 128);
+            }
+        }
+
+        private void textSearch_TextChanged(object sender, EventArgs e)
+        {
+            string searchText = textSearch.Text;
+            
+            // Ignore placeholder
+            if (searchText == SearchPlaceholder || string.IsNullOrWhiteSpace(searchText))
+            {
+                // Show all products
+                products.Clear();
+                foreach (var p in allProducts)
+                {
+                    products.Add(p);
+                }
+                return;
+            }
+
+            // Filter products
+            var filtered = allProducts.Where(p =>
+                (p.Name?.IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                (p.Description?.IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0)
+            ).ToList();
+
+            products.Clear();
+            foreach (var p in filtered)
+            {
+                products.Add(p);
+            }
+        }
+
         private void SaveProducts()
         {
             try
             {
-                repository.SaveAll(new List<Product>(products));
+                repository.SaveAll(allProducts);
             }
             catch (Exception ex)
             {
