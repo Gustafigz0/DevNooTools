@@ -81,20 +81,22 @@ namespace DevNooTools
         {
             this.components = new System.ComponentModel.Container();
 
-            // ===== DARK INDIGO COLOR SCHEME =====
-            System.Drawing.Color bgDark = System.Drawing.Color.FromArgb(15, 23, 42);
-            System.Drawing.Color bgSidebar = System.Drawing.Color.FromArgb(30, 41, 59);
-            System.Drawing.Color bgCard = System.Drawing.Color.FromArgb(51, 65, 85);
-            System.Drawing.Color bgInput = System.Drawing.Color.FromArgb(30, 41, 59);
-            System.Drawing.Color accent = System.Drawing.Color.FromArgb(99, 102, 241);
-            System.Drawing.Color accentLight = System.Drawing.Color.FromArgb(129, 140, 248);
-            System.Drawing.Color accentGreen = System.Drawing.Color.FromArgb(34, 197, 94);
-            System.Drawing.Color accentRed = System.Drawing.Color.FromArgb(239, 68, 68);
-            System.Drawing.Color accentOrange = System.Drawing.Color.FromArgb(249, 115, 22);
-            System.Drawing.Color textWhite = System.Drawing.Color.FromArgb(248, 250, 252);
-            System.Drawing.Color textGray = System.Drawing.Color.FromArgb(148, 163, 184);
-            System.Drawing.Color textMuted = System.Drawing.Color.FromArgb(100, 116, 139);
-            System.Drawing.Color border = System.Drawing.Color.FromArgb(71, 85, 105);
+            // ===== MODERN COLOR SCHEME - Vibrant Dark Theme =====
+            System.Drawing.Color bgDark = System.Drawing.Color.FromArgb(10, 15, 30);              // Azul escuro profundo
+            System.Drawing.Color bgSidebar = System.Drawing.Color.FromArgb(17, 24, 48);           // Azul sidebar
+            System.Drawing.Color bgCard = System.Drawing.Color.FromArgb(24, 33, 62);              // Cards mais vibrantes
+            System.Drawing.Color bgInput = System.Drawing.Color.FromArgb(17, 24, 48);             // Inputs escuros
+            System.Drawing.Color accent = System.Drawing.Color.FromArgb(99, 102, 241);            // Indigo vibrante
+            System.Drawing.Color accentLight = System.Drawing.Color.FromArgb(139, 145, 255);      // Indigo claro
+            System.Drawing.Color accentGreen = System.Drawing.Color.FromArgb(16, 185, 129);       // Verde esmeralda
+            System.Drawing.Color accentRed = System.Drawing.Color.FromArgb(248, 113, 113);        // Vermelho suave
+            System.Drawing.Color accentOrange = System.Drawing.Color.FromArgb(251, 146, 60);      // Laranja vibrante
+            System.Drawing.Color accentPurple = System.Drawing.Color.FromArgb(168, 85, 247);      // Roxo vibrante
+            System.Drawing.Color textWhite = System.Drawing.Color.FromArgb(248, 250, 252);        // Branco quase puro
+            System.Drawing.Color textGray = System.Drawing.Color.FromArgb(156, 163, 175);         // Cinza médio
+            System.Drawing.Color textMuted = System.Drawing.Color.FromArgb(107, 114, 128);        // Cinza escuro
+            System.Drawing.Color border = System.Drawing.Color.FromArgb(55, 65, 81);              // Borda sutil
+            System.Drawing.Color borderLight = System.Drawing.Color.FromArgb(75, 85, 99);         // Borda mais clara
 
             System.Drawing.Font fontLogo = new System.Drawing.Font("Segoe UI", 18F, System.Drawing.FontStyle.Bold);
             System.Drawing.Font fontLogoSub = new System.Drawing.Font("Segoe UI", 9F);
@@ -265,8 +267,8 @@ namespace DevNooTools
             this.textSearch.BackColor = bgInput;
             this.textSearch.ForeColor = textWhite;
             this.textSearch.Text = "Buscar produtos...";
-            this.textSearch.BorderColor = border;
-            this.textSearch.FocusBorderColor = accent;
+            this.textSearch.BorderColor = borderLight;
+            this.textSearch.FocusBorderColor = accentLight;
             this.textSearch.Radius = 12;
             this.textSearch.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
             this.textSearch.Enter += new System.EventHandler(this.textSearch_Enter);
@@ -278,8 +280,8 @@ namespace DevNooTools
             this.btnExport.Text = "Exportar";
             this.btnExport.Font = fontButton;
             this.btnExport.ForeColor = textWhite;
-            this.btnExport.BackColor = accent;
-            this.btnExport.HoverColor = accentLight;
+            this.btnExport.BackColor = accentPurple;
+            this.btnExport.HoverColor = System.Drawing.Color.FromArgb(147, 51, 234);
             this.btnExport.Radius = 12;
             this.btnExport.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
 
@@ -321,7 +323,7 @@ namespace DevNooTools
             this.cardTotal.Location = new System.Drawing.Point(0, 0);
             this.cardTotal.Size = new System.Drawing.Size(cardW, cardH);
             this.cardTotal.Radius = 16;
-            this.cardTotal.BorderColor = border;
+            this.cardTotal.BorderColor = System.Drawing.Color.FromArgb(99, 102, 241, 60);
             this.cardTotal.BorderSize = 1;
 
             this.labelCardTotalIcon.Text = "#";
@@ -338,7 +340,7 @@ namespace DevNooTools
 
             this.labelCardTotalValue.Text = "0";
             this.labelCardTotalValue.Font = fontCardValue;
-            this.labelCardTotalValue.ForeColor = accent;
+            this.labelCardTotalValue.ForeColor = accentLight;
             this.labelCardTotalValue.Location = new System.Drawing.Point(16, 52);
             this.labelCardTotalValue.AutoSize = true;
 
@@ -351,7 +353,7 @@ namespace DevNooTools
             this.cardValue.Location = new System.Drawing.Point(cardW + cardGap, 0);
             this.cardValue.Size = new System.Drawing.Size(cardW, cardH);
             this.cardValue.Radius = 16;
-            this.cardValue.BorderColor = border;
+            this.cardValue.BorderColor = System.Drawing.Color.FromArgb(16, 185, 129, 60);
             this.cardValue.BorderSize = 1;
 
             this.labelCardValueIcon.Text = "E";
@@ -381,7 +383,7 @@ namespace DevNooTools
             this.cardLowStock.Location = new System.Drawing.Point((cardW + cardGap) * 2, 0);
             this.cardLowStock.Size = new System.Drawing.Size(cardW, cardH);
             this.cardLowStock.Radius = 16;
-            this.cardLowStock.BorderColor = border;
+            this.cardLowStock.BorderColor = System.Drawing.Color.FromArgb(251, 146, 60, 60);
             this.cardLowStock.BorderSize = 1;
 
             this.labelCardLowStockIcon.Text = "!";
@@ -416,7 +418,7 @@ namespace DevNooTools
 
             this.labelCardCategoriesIcon.Text = "C";
             this.labelCardCategoriesIcon.Font = fontCardIcon;
-            this.labelCardCategoriesIcon.ForeColor = accentLight;
+            this.labelCardCategoriesIcon.ForeColor = accentPurple;
             this.labelCardCategoriesIcon.Location = new System.Drawing.Point(16, 16);
             this.labelCardCategoriesIcon.AutoSize = true;
 
@@ -428,7 +430,7 @@ namespace DevNooTools
 
             this.labelCardCategoriesValue.Text = "0";
             this.labelCardCategoriesValue.Font = fontCardValue;
-            this.labelCardCategoriesValue.ForeColor = accentLight;
+            this.labelCardCategoriesValue.ForeColor = accentPurple;
             this.labelCardCategoriesValue.Location = new System.Drawing.Point(16, 52);
             this.labelCardCategoriesValue.AutoSize = true;
 
@@ -462,7 +464,7 @@ namespace DevNooTools
             this.panelForm.Dock = System.Windows.Forms.DockStyle.Top;
             this.panelForm.Height = 180;
             this.panelForm.Radius = 16;
-            this.panelForm.BorderColor = border;
+            this.panelForm.BorderColor = borderLight;
             this.panelForm.BorderSize = 1;
             this.panelForm.Padding = new System.Windows.Forms.Padding(24);
 
@@ -482,8 +484,8 @@ namespace DevNooTools
             this.textName.Size = new System.Drawing.Size(170, 42);
             this.textName.BackColor = bgInput;
             this.textName.ForeColor = textWhite;
-            this.textName.BorderColor = border;
-            this.textName.FocusBorderColor = accent;
+            this.textName.BorderColor = borderLight;
+            this.textName.FocusBorderColor = accentLight;
             this.textName.Radius = 10;
 
             this.lblDescription.Text = "DESCRICAO";
@@ -496,8 +498,8 @@ namespace DevNooTools
             this.textDescription.Size = new System.Drawing.Size(220, 42);
             this.textDescription.BackColor = bgInput;
             this.textDescription.ForeColor = textWhite;
-            this.textDescription.BorderColor = border;
-            this.textDescription.FocusBorderColor = accent;
+            this.textDescription.BorderColor = borderLight;
+            this.textDescription.FocusBorderColor = accentLight;
             this.textDescription.Radius = 10;
 
             this.lblPrice.Text = "PRECO (EUR)";
@@ -510,8 +512,8 @@ namespace DevNooTools
             this.textPrice.Size = new System.Drawing.Size(120, 42);
             this.textPrice.BackColor = bgInput;
             this.textPrice.ForeColor = textWhite;
-            this.textPrice.BorderColor = border;
-            this.textPrice.FocusBorderColor = accent;
+            this.textPrice.BorderColor = borderLight;
+            this.textPrice.FocusBorderColor = accentGreen;
             this.textPrice.Radius = 10;
             this.textPrice.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
 
@@ -525,8 +527,8 @@ namespace DevNooTools
             this.textQuantity.Size = new System.Drawing.Size(80, 42);
             this.textQuantity.BackColor = bgInput;
             this.textQuantity.ForeColor = textWhite;
-            this.textQuantity.BorderColor = border;
-            this.textQuantity.FocusBorderColor = accent;
+            this.textQuantity.BorderColor = borderLight;
+            this.textQuantity.FocusBorderColor = accentLight;
             this.textQuantity.Radius = 10;
             this.textQuantity.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
 
@@ -601,7 +603,7 @@ namespace DevNooTools
             this.panelGrid.BackColor = bgCard;
             this.panelGrid.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panelGrid.Radius = 16;
-            this.panelGrid.BorderColor = border;
+            this.panelGrid.BorderColor = borderLight;
             this.panelGrid.BorderSize = 1;
             this.panelGrid.Padding = new System.Windows.Forms.Padding(20, 15, 20, 20);
 
