@@ -39,6 +39,12 @@ namespace DevNooTools
                 UpdateStats();
                 dataGridViewProducts.ClearSelection();
                 ClearFields();
+
+                // Show database location in title bar
+                if (!string.IsNullOrEmpty(repository.DatabasePath))
+                {
+                    this.Text = $"DevNooTools - SQLite: {repository.DatabasePath}";
+                }
             }
             catch (Exception ex)
             {
@@ -139,7 +145,7 @@ namespace DevNooTools
 
             if (string.IsNullOrWhiteSpace(textName.Text))
             {
-                MessageBox.Show("Nome e obrigatorio.", "Validacao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Nome e obligatorio.", "Validacao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 textName.Focus();
                 return;
             }
