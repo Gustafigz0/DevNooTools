@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Data.SQLite;
 using System.IO;
 using System.Xml.Serialization;
 
@@ -11,27 +10,27 @@ namespace DevNooTools
         private readonly string xmlFilePath;
         private readonly XmlSerializer serializer = new XmlSerializer(typeof(List<Product>));
         private readonly DatabaseHelper dbHelper;
-        private readonly bool useSQLite;
+        private readonly bool useJson;
 
-        public ProductRepository(bool useSQLite = true, string xmlFilePath = null)
+        public ProductRepository(bool useJson = true, string xmlFilePath = null)
         {
-            this.useSQLite = useSQLite;
+            this.useJson = useJson;
             this.xmlFilePath = xmlFilePath ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "products.xml");
             
-            if (useSQLite)
+            if (useJson)
             {
                 dbHelper = new DatabaseHelper();
                 MigrateFromXmlIfNeeded();
             }
         }
 
-        public string DatabasePath => useSQLite && dbHelper != null ? dbHelper.DatabasePath : null;
+        public string DatabasePath => useJson && dbHelper != null ? dbHelper.DatabasePath : null;
 
         public List<Product> LoadAll()
         {
-            if (useSQLite)
+            if (useJson)
             {
-                return LoadFromSQLite();
+                return dbHelper.LoadProducts();
             }
             else
             {
@@ -41,9 +40,9 @@ namespace DevNooTools
 
         public void SaveAll(List<Product> products)
         {
-            if (useSQLite)
+            if (useJson)
             {
-                SaveToSQLite(products);
+                dbHelper.SaveProducts(products);
             }
             else
             {
@@ -51,117 +50,24 @@ namespace DevNooTools
             }
         }
 
-        #region SQLite Methods
-
-        private List<Product> LoadFromSQLite()
-        {
-            var products = new List<Product>();
-
-            try
-            {
-                using (var connection = dbHelper.GetConnection())
-                {
-                    string query = "SELECT Id, Name, Description, Price, Quantity FROM Products";
-                    
-                    using (var command = new SQLiteCommand(query, connection))
-                    using (var reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            var product = new Product
-                            {
-                                Id = Guid.Parse(reader["Id"].ToString()),
-                                Name = reader["Name"].ToString(),
-                                Description = reader["Description"]?.ToString() ?? string.Empty,
-                                Price = Convert.ToDecimal(reader["Price"]),
-                                Quantity = Convert.ToInt32(reader["Quantity"])
-                            };
-                            products.Add(product);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Erro ao carregar produtos do banco de dados: {ex.Message}", ex);
-            }
-
-            return products;
-        }
-
-        private void SaveToSQLite(List<Product> products)
-        {
-            try
-            {
-                using (var connection = dbHelper.GetConnection())
-                using (var transaction = connection.BeginTransaction())
-                {
-                    try
-                    {
-                        // Clear existing products
-                        using (var deleteCommand = new SQLiteCommand("DELETE FROM Products", connection, transaction))
-                        {
-                            deleteCommand.ExecuteNonQuery();
-                        }
-
-                        // Insert all products
-                        string insertQuery = @"
-                            INSERT INTO Products (Id, Name, Description, Price, Quantity)
-                            VALUES (@Id, @Name, @Description, @Price, @Quantity)";
-
-                        foreach (var product in products)
-                        {
-                            using (var command = new SQLiteCommand(insertQuery, connection, transaction))
-                            {
-                                command.Parameters.AddWithValue("@Id", product.Id.ToString());
-                                command.Parameters.AddWithValue("@Name", product.Name ?? string.Empty);
-                                command.Parameters.AddWithValue("@Description", product.Description ?? string.Empty);
-                                command.Parameters.AddWithValue("@Price", product.Price);
-                                command.Parameters.AddWithValue("@Quantity", product.Quantity);
-                                command.ExecuteNonQuery();
-                            }
-                        }
-
-                        transaction.Commit();
-                    }
-                    catch
-                    {
-                        transaction.Rollback();
-                        throw;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Erro ao salvar produtos no banco de dados: {ex.Message}", ex);
-            }
-        }
-
         private void MigrateFromXmlIfNeeded()
         {
             try
             {
-                // Check if SQLite database is empty
-                using (var connection = dbHelper.GetConnection())
+                // Check if JSON database is empty
+                var existingProducts = dbHelper.LoadProducts();
+                
+                // If database is empty and XML file exists, migrate data
+                if (existingProducts.Count == 0 && File.Exists(xmlFilePath))
                 {
-                    string countQuery = "SELECT COUNT(*) FROM Products";
-                    using (var command = new SQLiteCommand(countQuery, connection))
+                    var xmlProducts = LoadFromXml();
+                    if (xmlProducts.Count > 0)
                     {
-                        long count = (long)command.ExecuteScalar();
+                        dbHelper.SaveProducts(xmlProducts);
                         
-                        // If database is empty and XML file exists, migrate data
-                        if (count == 0 && File.Exists(xmlFilePath))
-                        {
-                            var xmlProducts = LoadFromXml();
-                            if (xmlProducts.Count > 0)
-                            {
-                                SaveToSQLite(xmlProducts);
-                                
-                                // Backup the XML file
-                                string backupPath = xmlFilePath + ".backup";
-                                File.Copy(xmlFilePath, backupPath, true);
-                            }
-                        }
+                        // Backup the XML file
+                        string backupPath = xmlFilePath + ".backup";
+                        File.Copy(xmlFilePath, backupPath, true);
                     }
                 }
             }
@@ -170,8 +76,6 @@ namespace DevNooTools
                 // Migration is optional, continue even if it fails
             }
         }
-
-        #endregion
 
         #region XML Methods (Legacy)
 

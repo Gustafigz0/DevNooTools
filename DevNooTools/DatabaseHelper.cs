@@ -1,58 +1,58 @@
 using System;
-using System.Data.SQLite;
+using System.Collections.Generic;
 using System.IO;
+using System.Xml.Serialization;
 
 namespace DevNooTools
 {
     public class DatabaseHelper
     {
-        private readonly string connectionString;
         private readonly string dbPath;
+        private readonly XmlSerializer serializer = new XmlSerializer(typeof(List<Product>));
 
-        public DatabaseHelper(string dbFileName = "devnootools.db")
+        public DatabaseHelper(string dbFileName = "devnootools_data.xml")
         {
             dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, dbFileName);
-            connectionString = $"Data Source={dbPath};Version=3;";
-            InitializeDatabase();
         }
 
-        public string ConnectionString => connectionString;
         public string DatabasePath => dbPath;
 
-        private void InitializeDatabase()
+        public List<Product> LoadProducts()
         {
-            bool isNewDatabase = !File.Exists(dbPath);
-
-            if (isNewDatabase)
+            try
             {
-                SQLiteConnection.CreateFile(dbPath);
-            }
+                if (!File.Exists(dbPath))
+                    return new List<Product>();
 
-            using (var connection = new SQLiteConnection(connectionString))
-            {
-                connection.Open();
-
-                string createTableQuery = @"
-                    CREATE TABLE IF NOT EXISTS Products (
-                        Id TEXT PRIMARY KEY,
-                        Name TEXT NOT NULL,
-                        Description TEXT,
-                        Price REAL NOT NULL,
-                        Quantity INTEGER NOT NULL
-                    );";
-
-                using (var command = new SQLiteCommand(createTableQuery, connection))
+                using (var fs = File.OpenRead(dbPath))
                 {
-                    command.ExecuteNonQuery();
+                    var result = serializer.Deserialize(fs) as List<Product>;
+                    return result ?? new List<Product>();
                 }
+            }
+            catch
+            {
+                return new List<Product>();
             }
         }
 
-        public SQLiteConnection GetConnection()
+        public void SaveProducts(List<Product> products)
         {
-            var connection = new SQLiteConnection(connectionString);
-            connection.Open();
-            return connection;
+            try
+            {
+                var dir = Path.GetDirectoryName(dbPath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+
+                using (var fs = File.Create(dbPath))
+                {
+                    serializer.Serialize(fs, products);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Erro ao salvar dados: {ex.Message}", ex);
+            }
         }
     }
 }
