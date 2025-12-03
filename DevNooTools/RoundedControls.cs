@@ -5,47 +5,72 @@ using System.Windows.Forms;
 
 namespace DevNooTools
 {
-    #region Modern Light Theme
+    #region Theme Manager
 
-    /// <summary>
-    /// Modern Light Theme Colors - Clean White Design
-    /// </summary>
-    public static class LightTheme
+    public static class ThemeManager
     {
-        // Base colors - Clean whites and grays
-        public static readonly Color BgPrimary = Color.FromArgb(250, 251, 252);
-        public static readonly Color BgSecondary = Color.FromArgb(255, 255, 255);
-        public static readonly Color BgCard = Color.FromArgb(255, 255, 255);
-        public static readonly Color BgSidebar = Color.FromArgb(248, 250, 252);
-        public static readonly Color BgInput = Color.FromArgb(247, 248, 250);
-        public static readonly Color BgHover = Color.FromArgb(243, 244, 246);
+        public static bool IsDarkTheme { get; set; } = true;
 
-        // Accent colors - Vibrant gradients
-        public static readonly Color AccentBlue = Color.FromArgb(59, 130, 246);
-        public static readonly Color AccentIndigo = Color.FromArgb(99, 102, 241);
-        public static readonly Color AccentPurple = Color.FromArgb(139, 92, 246);
-        public static readonly Color AccentPink = Color.FromArgb(236, 72, 153);
-        public static readonly Color AccentCyan = Color.FromArgb(6, 182, 212);
-        public static readonly Color AccentTeal = Color.FromArgb(20, 184, 166);
+        public static event Action ThemeChanged;
 
-        // Status colors
-        public static readonly Color Success = Color.FromArgb(34, 197, 94);
-        public static readonly Color Warning = Color.FromArgb(245, 158, 11);
-        public static readonly Color Danger = Color.FromArgb(239, 68, 68);
-        public static readonly Color Info = Color.FromArgb(59, 130, 246);
+        public static void ToggleTheme()
+        {
+            IsDarkTheme = !IsDarkTheme;
+            ThemeChanged?.Invoke();
+        }
 
-        // Text colors
-        public static readonly Color TextPrimary = Color.FromArgb(17, 24, 39);
-        public static readonly Color TextSecondary = Color.FromArgb(107, 114, 128);
-        public static readonly Color TextMuted = Color.FromArgb(156, 163, 175);
+        // Light Theme (GitHub Light)
+        public static class Light
+        {
+            public static readonly Color BgPrimary = Color.FromArgb(255, 255, 255);
+            public static readonly Color BgSecondary = Color.FromArgb(246, 248, 250);
+            public static readonly Color BgCard = Color.FromArgb(255, 255, 255);
+            public static readonly Color BgInput = Color.FromArgb(246, 248, 250);
+            public static readonly Color BgHover = Color.FromArgb(234, 238, 242);
 
-        // Border colors
-        public static readonly Color BorderDefault = Color.FromArgb(229, 231, 235);
-        public static readonly Color BorderLight = Color.FromArgb(243, 244, 246);
-        public static readonly Color BorderFocus = Color.FromArgb(59, 130, 246);
+            public static readonly Color TextPrimary = Color.FromArgb(36, 41, 47);
+            public static readonly Color TextSecondary = Color.FromArgb(87, 96, 106);
+            public static readonly Color TextMuted = Color.FromArgb(140, 149, 159);
 
-        // Shadow color
-        public static readonly Color Shadow = Color.FromArgb(30, 0, 0, 0);
+            public static readonly Color BorderDefault = Color.FromArgb(216, 222, 228);
+        }
+
+        // Dark Theme (GitHub Dark)
+        public static class Dark
+        {
+            public static readonly Color BgPrimary = Color.FromArgb(13, 17, 23);
+            public static readonly Color BgSecondary = Color.FromArgb(22, 27, 34);
+            public static readonly Color BgCard = Color.FromArgb(22, 27, 34);
+            public static readonly Color BgInput = Color.FromArgb(33, 38, 45);
+            public static readonly Color BgHover = Color.FromArgb(48, 54, 61);
+
+            public static readonly Color TextPrimary = Color.FromArgb(230, 237, 243);
+            public static readonly Color TextSecondary = Color.FromArgb(139, 148, 158);
+            public static readonly Color TextMuted = Color.FromArgb(110, 118, 129);
+
+            public static readonly Color BorderDefault = Color.FromArgb(48, 54, 61);
+        }
+
+        // Accent colors
+        public static readonly Color AccentBlue = Color.FromArgb(56, 139, 253);
+        public static readonly Color AccentBlueDark = Color.FromArgb(31, 111, 235);
+        public static readonly Color AccentGreen = Color.FromArgb(46, 160, 67);
+        public static readonly Color AccentGreenDark = Color.FromArgb(35, 134, 54);
+        public static readonly Color AccentOrange = Color.FromArgb(227, 98, 9);
+        public static readonly Color AccentPurple = Color.FromArgb(130, 80, 223);
+        public static readonly Color AccentRed = Color.FromArgb(218, 54, 51);
+        public static readonly Color AccentRedDark = Color.FromArgb(191, 38, 35);
+
+        // Current theme colors
+        public static Color BgPrimary => IsDarkTheme ? Dark.BgPrimary : Light.BgPrimary;
+        public static Color BgSecondary => IsDarkTheme ? Dark.BgSecondary : Light.BgSecondary;
+        public static Color BgCard => IsDarkTheme ? Dark.BgCard : Light.BgCard;
+        public static Color BgInput => IsDarkTheme ? Dark.BgInput : Light.BgInput;
+        public static Color BgHover => IsDarkTheme ? Dark.BgHover : Light.BgHover;
+        public static Color TextPrimary => IsDarkTheme ? Dark.TextPrimary : Light.TextPrimary;
+        public static Color TextSecondary => IsDarkTheme ? Dark.TextSecondary : Light.TextSecondary;
+        public static Color TextMuted => IsDarkTheme ? Dark.TextMuted : Light.TextMuted;
+        public static Color BorderDefault => IsDarkTheme ? Dark.BorderDefault : Light.BorderDefault;
     }
 
     #endregion
@@ -85,7 +110,7 @@ namespace DevNooTools
                 }
                 parent = parent.Parent;
             }
-            return LightTheme.BgPrimary;
+            return ThemeManager.BgPrimary;
         }
 
         public static Color LightenColor(Color color, float percent)
@@ -104,21 +129,13 @@ namespace DevNooTools
             return Color.FromArgb(color.A, (int)Math.Max(0, r), (int)Math.Max(0, g), (int)Math.Max(0, b));
         }
 
-        public static Color BlendColors(Color color1, Color color2, float ratio)
-        {
-            int r = (int)(color1.R * (1 - ratio) + color2.R * ratio);
-            int g = (int)(color1.G * (1 - ratio) + color2.G * ratio);
-            int b = (int)(color1.B * (1 - ratio) + color2.B * ratio);
-            return Color.FromArgb(Math.Min(255, r), Math.Min(255, g), Math.Min(255, b));
-        }
-
-        public static void DrawShadow(Graphics g, Rectangle rect, int radius, int shadowDepth)
+        public static void DrawShadow(Graphics g, Rectangle rect, int radius, int shadowDepth, int alpha = 12)
         {
             for (int i = shadowDepth; i > 0; i--)
             {
                 var shadowRect = new Rectangle(rect.X + i, rect.Y + i, rect.Width, rect.Height);
                 using (var path = CreateRoundedRectangle(shadowRect, radius))
-                using (var brush = new SolidBrush(Color.FromArgb(8, 0, 0, 0)))
+                using (var brush = new SolidBrush(Color.FromArgb(alpha, 0, 0, 0)))
                 {
                     g.FillPath(brush, path);
                 }
@@ -128,27 +145,87 @@ namespace DevNooTools
 
     #endregion
 
-    #region Rounded Panel
+    #region Toggle Switch (Animated)
 
-    public class RoundedPanel : Panel
+    public class ToggleSwitch : Control
     {
-        private int _radius = 16;
-        private Color _borderColor = LightTheme.BorderDefault;
-        private int _borderSize = 0;
-        private bool _showShadow = false;
+        private bool _isOn = false;
+        private Color _onColor = ThemeManager.AccentBlue;
+        private Color _offColor = Color.FromArgb(110, 118, 129);
+        private bool _isHovering = false;
+        private float _animationProgress = 0f;
+        private Timer _animationTimer;
 
-        public int Radius { get => _radius; set { _radius = value; Invalidate(); } }
-        public Color BorderColor { get => _borderColor; set { _borderColor = value; Invalidate(); } }
-        public int BorderSize { get => _borderSize; set { _borderSize = value; Invalidate(); } }
-        public bool ShowShadow { get => _showShadow; set { _showShadow = value; Invalidate(); } }
+        public bool IsOn
+        {
+            get => _isOn;
+            set
+            {
+                if (_isOn != value)
+                {
+                    _isOn = value;
+                    _animationProgress = value ? 1f : 0f;
+                    Invalidate();
+                    OnToggled?.Invoke(this, EventArgs.Empty);
+                }
+            }
+        }
 
-        public RoundedPanel()
+        public Color OnColor { get => _onColor; set { _onColor = value; Invalidate(); } }
+        public Color OffColor { get => _offColor; set { _offColor = value; Invalidate(); } }
+
+        public event EventHandler OnToggled;
+
+        public ToggleSwitch()
         {
             DoubleBuffered = true;
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
                      ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
                      ControlStyles.SupportsTransparentBackColor, true);
-            BackColor = LightTheme.BgCard;
+            Size = new Size(48, 26);
+            Cursor = Cursors.Hand;
+
+            _animationTimer = new Timer { Interval = 16 };
+            _animationTimer.Tick += AnimationTimer_Tick;
+        }
+
+        private void AnimationTimer_Tick(object sender, EventArgs e)
+        {
+            float target = _isOn ? 1f : 0f;
+            float diff = target - _animationProgress;
+
+            if (Math.Abs(diff) < 0.05f)
+            {
+                _animationProgress = target;
+                _animationTimer.Stop();
+            }
+            else
+            {
+                _animationProgress += diff * 0.3f;
+            }
+            Invalidate();
+        }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            base.OnMouseEnter(e);
+            _isHovering = true;
+            Invalidate();
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            _isHovering = false;
+            Invalidate();
+        }
+
+        protected override void OnClick(EventArgs e)
+        {
+            base.OnClick(e);
+            _isOn = !_isOn;
+            _animationTimer.Start();
+            OnToggled?.Invoke(this, EventArgs.Empty);
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -161,13 +238,167 @@ namespace DevNooTools
                 e.Graphics.FillRectangle(clearBrush, ClientRectangle);
             }
 
-            int padding = _showShadow ? 4 : 0;
+            var trackRect = new Rectangle(0, 0, Width - 1, Height - 1);
+            
+            Color trackColor = InterpolateColor(_offColor, _onColor, _animationProgress);
+            if (_isHovering)
+            {
+                trackColor = RoundedHelper.LightenColor(trackColor, 0.15f);
+            }
+
+            using (var path = RoundedHelper.CreateRoundedRectangle(trackRect, Height / 2))
+            using (var brush = new SolidBrush(trackColor))
+            {
+                e.Graphics.FillPath(brush, path);
+            }
+
+            // Thumb
+            int thumbSize = Height - 6;
+            int thumbX = (int)(3 + (Width - thumbSize - 6) * _animationProgress);
+            var thumbRect = new Rectangle(thumbX, 3, thumbSize, thumbSize);
+
+            // Thumb shadow
+            var shadowRect = new Rectangle(thumbX + 1, 4, thumbSize, thumbSize);
+            using (var shadowPath = RoundedHelper.CreateRoundedRectangle(shadowRect, thumbSize / 2))
+            using (var shadowBrush = new SolidBrush(Color.FromArgb(40, 0, 0, 0)))
+            {
+                e.Graphics.FillPath(shadowBrush, shadowPath);
+            }
+
+            using (var thumbPath = RoundedHelper.CreateRoundedRectangle(thumbRect, thumbSize / 2))
+            using (var thumbBrush = new SolidBrush(Color.White))
+            {
+                e.Graphics.FillPath(thumbBrush, thumbPath);
+            }
+        }
+
+        private Color InterpolateColor(Color from, Color to, float progress)
+        {
+            int r = (int)(from.R + (to.R - from.R) * progress);
+            int g = (int)(from.G + (to.G - from.G) * progress);
+            int b = (int)(from.B + (to.B - from.B) * progress);
+            return Color.FromArgb(r, g, b);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) _animationTimer?.Dispose();
+            base.Dispose(disposing);
+        }
+    }
+
+    #endregion
+
+    #region User Profile Panel
+
+    public class UserProfilePanel : Panel
+    {
+        private int _radius = 12;
+        private bool _isHovering = false;
+
+        public int Radius { get => _radius; set { _radius = value; Invalidate(); } }
+
+        public UserProfilePanel()
+        {
+            DoubleBuffered = true;
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
+                     ControlStyles.SupportsTransparentBackColor, true);
+        }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            base.OnMouseEnter(e);
+            _isHovering = true;
+            Invalidate();
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            _isHovering = false;
+            Invalidate();
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+            Color clearColor = RoundedHelper.GetActualParentBackColor(this);
+            using (var clearBrush = new SolidBrush(clearColor))
+            {
+                e.Graphics.FillRectangle(clearBrush, ClientRectangle);
+            }
+
+            var rect = new Rectangle(0, 0, Width - 1, Height - 1);
+
+            Color bgColor = ThemeManager.IsDarkTheme 
+                ? Color.FromArgb(22, 27, 34) 
+                : Color.FromArgb(246, 248, 250);
+            
+            if (_isHovering)
+            {
+                bgColor = ThemeManager.BgHover;
+            }
+
+            using (var path = RoundedHelper.CreateRoundedRectangle(rect, _radius))
+            {
+                using (var brush = new SolidBrush(bgColor))
+                {
+                    e.Graphics.FillPath(brush, path);
+                }
+
+                using (var pen = new Pen(ThemeManager.BorderDefault, 1f))
+                {
+                    e.Graphics.DrawPath(pen, path);
+                }
+            }
+        }
+    }
+
+    #endregion
+
+    #region Rounded Panel
+
+    public class RoundedPanel : Panel
+    {
+        private int _radius = 12;
+        private Color _borderColor = ThemeManager.BorderDefault;
+        private int _borderSize = 1;
+        private bool _showShadow = false;
+        private int _shadowDepth = 4;
+
+        public int Radius { get => _radius; set { _radius = value; Invalidate(); } }
+        public Color BorderColor { get => _borderColor; set { _borderColor = value; Invalidate(); } }
+        public int BorderSize { get => _borderSize; set { _borderSize = value; Invalidate(); } }
+        public bool ShowShadow { get => _showShadow; set { _showShadow = value; Invalidate(); } }
+        public int ShadowDepth { get => _shadowDepth; set { _shadowDepth = value; Invalidate(); } }
+
+        public RoundedPanel()
+        {
+            DoubleBuffered = true;
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
+                     ControlStyles.SupportsTransparentBackColor, true);
+            BackColor = ThemeManager.BgCard;
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+            Color clearColor = RoundedHelper.GetActualParentBackColor(this);
+            using (var clearBrush = new SolidBrush(clearColor))
+            {
+                e.Graphics.FillRectangle(clearBrush, ClientRectangle);
+            }
+
+            int padding = _showShadow ? _shadowDepth : 0;
             var rect = new Rectangle(padding, padding, Width - 1 - padding * 2, Height - 1 - padding * 2);
 
-            // Draw shadow
             if (_showShadow)
             {
-                RoundedHelper.DrawShadow(e.Graphics, rect, _radius, 4);
+                RoundedHelper.DrawShadow(e.Graphics, rect, _radius, _shadowDepth);
             }
 
             using (var path = RoundedHelper.CreateRoundedRectangle(rect, _radius))
@@ -196,11 +427,11 @@ namespace DevNooTools
 
     #endregion
 
-    #region Modern Button
+    #region Rounded Button
 
     public class RoundedButton : Button
     {
-        private int _radius = 10;
+        private int _radius = 8;
         private bool _isHovering = false;
         private bool _isPressed = false;
         private bool _useGradient = true;
@@ -218,7 +449,7 @@ namespace DevNooTools
             DoubleBuffered = true;
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
                      ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
-            Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             ForeColor = Color.White;
         }
 
@@ -263,37 +494,40 @@ namespace DevNooTools
 
             var rect = new Rectangle(0, 0, Width - 1, Height - 1);
 
-            if (_isPressed)
-            {
-                rect.Inflate(-1, -1);
-            }
+            if (_isPressed) rect.Inflate(-1, -1);
 
             using (var path = RoundedHelper.CreateRoundedRectangle(rect, _radius))
             {
-                // Background
-                Color bgColor = BackColor;
-                if (_isHovering) bgColor = RoundedHelper.LightenColor(BackColor, 0.1f);
-                if (_isPressed) bgColor = RoundedHelper.DarkenColor(BackColor, 0.1f);
+                Color startColor = BackColor;
+                Color endColor = _gradientEndColor != Color.Empty ? _gradientEndColor : RoundedHelper.DarkenColor(BackColor, 0.15f);
 
-                if (_useGradient && _gradientEndColor != Color.Empty)
+                if (_isHovering)
                 {
-                    using (var brush = new LinearGradientBrush(rect, bgColor,
-                        _isHovering ? RoundedHelper.LightenColor(_gradientEndColor, 0.1f) : _gradientEndColor,
-                        LinearGradientMode.Horizontal))
+                    startColor = RoundedHelper.LightenColor(startColor, 0.12f);
+                    endColor = RoundedHelper.LightenColor(endColor, 0.12f);
+                }
+                if (_isPressed)
+                {
+                    startColor = RoundedHelper.DarkenColor(BackColor, 0.1f);
+                    endColor = RoundedHelper.DarkenColor(endColor, 0.1f);
+                }
+
+                if (_useGradient && rect.Height > 0 && rect.Width > 0)
+                {
+                    using (var brush = new LinearGradientBrush(rect, startColor, endColor, LinearGradientMode.Vertical))
                     {
                         e.Graphics.FillPath(brush, path);
                     }
                 }
                 else
                 {
-                    using (var brush = new SolidBrush(bgColor))
+                    using (var brush = new SolidBrush(startColor))
                     {
                         e.Graphics.FillPath(brush, path);
                     }
                 }
             }
 
-            // Text
             TextRenderer.DrawText(e.Graphics, Text, Font, rect, ForeColor,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
         }
@@ -301,14 +535,14 @@ namespace DevNooTools
 
     #endregion
 
-    #region Modern TextBox
+    #region Rounded TextBox
 
     public class RoundedTextBox : UserControl
     {
         private TextBox _textBox;
-        private int _radius = 10;
-        private Color _borderColor = LightTheme.BorderDefault;
-        private Color _focusBorderColor = LightTheme.AccentBlue;
+        private int _radius = 8;
+        private Color _borderColor = ThemeManager.BorderDefault;
+        private Color _focusBorderColor = ThemeManager.AccentBlue;
         private bool _isFocused = false;
 
         public int Radius { get => _radius; set { _radius = value; Invalidate(); } }
@@ -327,6 +561,12 @@ namespace DevNooTools
             set { if (_textBox != null) _textBox.ForeColor = value; base.ForeColor = value; }
         }
 
+        public override Color BackColor
+        {
+            get => base.BackColor;
+            set { base.BackColor = value; if (_textBox != null) _textBox.BackColor = value; Invalidate(); }
+        }
+
         public HorizontalAlignment TextAlign
         {
             get => _textBox?.TextAlign ?? HorizontalAlignment.Left;
@@ -339,30 +579,18 @@ namespace DevNooTools
             remove { if (_textBox != null) _textBox.TextChanged -= value; }
         }
 
-        public new event EventHandler Enter
-        {
-            add { if (_textBox != null) _textBox.Enter += value; }
-            remove { if (_textBox != null) _textBox.Enter -= value; }
-        }
-
-        public new event EventHandler Leave
-        {
-            add { if (_textBox != null) _textBox.Leave += value; }
-            remove { if (_textBox != null) _textBox.Leave -= value; }
-        }
-
         public RoundedTextBox()
         {
             DoubleBuffered = true;
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
                      ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
-            BackColor = LightTheme.BgInput;
+            BackColor = ThemeManager.BgInput;
 
             _textBox = new TextBox
             {
                 BorderStyle = BorderStyle.None,
-                BackColor = LightTheme.BgInput,
-                ForeColor = LightTheme.TextPrimary,
+                BackColor = ThemeManager.BgInput,
+                ForeColor = ThemeManager.TextPrimary,
                 Font = new Font("Segoe UI", 10F)
             };
 
@@ -370,7 +598,7 @@ namespace DevNooTools
             _textBox.Leave += (s, e) => { _isFocused = false; Invalidate(); };
 
             Controls.Add(_textBox);
-            Height = 42;
+            Height = 36;
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -392,7 +620,10 @@ namespace DevNooTools
                     e.Graphics.FillPath(brush, path);
                 }
 
-                using (var pen = new Pen(_isFocused ? _focusBorderColor : _borderColor, _isFocused ? 2f : 1f))
+                Color borderColor = _isFocused ? _focusBorderColor : _borderColor;
+                float borderWidth = _isFocused ? 2f : 1f;
+
+                using (var pen = new Pen(borderColor, borderWidth))
                 {
                     e.Graphics.DrawPath(pen, path);
                 }
@@ -416,17 +647,12 @@ namespace DevNooTools
         {
             if (_textBox == null) return;
             _textBox.BackColor = BackColor;
-            int padding = 14;
+            _textBox.ForeColor = ForeColor;
+            int padding = 12;
             int textBoxHeight = _textBox.PreferredHeight;
             int y = (Height - textBoxHeight) / 2;
             _textBox.Location = new Point(padding, y);
             _textBox.Width = Width - (padding * 2);
-        }
-
-        protected override void OnBackColorChanged(EventArgs e)
-        {
-            base.OnBackColorChanged(e);
-            if (_textBox != null) _textBox.BackColor = BackColor;
         }
 
         public new void Focus() => _textBox?.Focus();
@@ -438,20 +664,17 @@ namespace DevNooTools
 
     public class GradientCard : Panel
     {
-        private int _radius = 14;
-        private Color _gradientStartColor = LightTheme.AccentBlue;
-        private Color _gradientEndColor = LightTheme.AccentIndigo;
-        private Color _borderColor = Color.Transparent;
-        private Color _accentColor = Color.Transparent;
-        private int _accentWidth = 0;
+        private int _radius = 12;
+        private Color _gradientStartColor = ThemeManager.AccentBlue;
+        private Color _gradientEndColor = ThemeManager.AccentBlueDark;
         private bool _showShadow = true;
 
         public int Radius { get => _radius; set { _radius = value; Invalidate(); } }
         public Color GradientStartColor { get => _gradientStartColor; set { _gradientStartColor = value; Invalidate(); } }
         public Color GradientEndColor { get => _gradientEndColor; set { _gradientEndColor = value; Invalidate(); } }
-        public Color BorderColor { get => _borderColor; set { _borderColor = value; Invalidate(); } }
-        public Color AccentColor { get => _accentColor; set { _accentColor = value; Invalidate(); } }
-        public int AccentWidth { get => _accentWidth; set { _accentWidth = value; Invalidate(); } }
+        public Color BorderColor { get; set; }
+        public Color AccentColor { get; set; }
+        public int AccentWidth { get; set; }
         public bool ShowShadow { get => _showShadow; set { _showShadow = value; Invalidate(); } }
 
         public GradientCard()
@@ -475,28 +698,18 @@ namespace DevNooTools
             int padding = _showShadow ? 4 : 0;
             var rect = new Rectangle(padding, padding, Width - 1 - padding * 2, Height - 1 - padding * 2);
 
-            // Shadow
             if (_showShadow)
             {
-                RoundedHelper.DrawShadow(e.Graphics, rect, _radius, 4);
+                RoundedHelper.DrawShadow(e.Graphics, rect, _radius, 5, 18);
             }
 
-            using (var path = RoundedHelper.CreateRoundedRectangle(rect, _radius))
+            if (rect.Width > 0 && rect.Height > 0)
             {
-                // Gradient background
+                using (var path = RoundedHelper.CreateRoundedRectangle(rect, _radius))
                 using (var brush = new LinearGradientBrush(rect, _gradientStartColor, _gradientEndColor,
-                    LinearGradientMode.ForwardDiagonal))
+                    LinearGradientMode.Vertical))
                 {
                     e.Graphics.FillPath(brush, path);
-                }
-
-                // Border
-                if (_borderColor != Color.Transparent)
-                {
-                    using (var pen = new Pen(_borderColor, 1f))
-                    {
-                        e.Graphics.DrawPath(pen, path);
-                    }
                 }
             }
         }
@@ -508,11 +721,11 @@ namespace DevNooTools
 
     public class NavPanel : Panel
     {
-        private int _radius = 10;
+        private int _radius = 8;
         private bool _isHovering = false;
         private bool _isSelected = false;
-        private Color _hoverColor = LightTheme.BgHover;
-        private Color _selectedColor = LightTheme.AccentBlue;
+        private Color _hoverColor = ThemeManager.BgHover;
+        private Color _selectedColor = ThemeManager.AccentBlue;
 
         public int Radius { get => _radius; set { _radius = value; Invalidate(); } }
         public bool IsSelected { get => _isSelected; set { _isSelected = value; Invalidate(); } }
@@ -557,16 +770,16 @@ namespace DevNooTools
             if (_isSelected)
             {
                 using (var path = RoundedHelper.CreateRoundedRectangle(rect, _radius))
-                using (var brush = new SolidBrush(Color.FromArgb(30, _selectedColor)))
+                using (var brush = new SolidBrush(Color.FromArgb(35, _selectedColor)))
                 {
                     e.Graphics.FillPath(brush, path);
                 }
 
-                // Left accent bar
-                var accentRect = new Rectangle(0, 4, 4, Height - 8);
+                var accentRect = new Rectangle(0, 6, 3, Height - 12);
+                using (var accentPath = RoundedHelper.CreateRoundedRectangle(accentRect, 2))
                 using (var brush = new SolidBrush(_selectedColor))
                 {
-                    e.Graphics.FillRectangle(brush, accentRect);
+                    e.Graphics.FillPath(brush, accentPath);
                 }
             }
             else if (_isHovering)
@@ -582,21 +795,20 @@ namespace DevNooTools
 
     #endregion
 
-    #region Glass Panel (simplified for light theme)
+    #region Glass Panel (Sidebar)
 
     public class GlassPanel : Panel
     {
         private int _radius = 0;
-        private Color _borderColor = LightTheme.BorderDefault;
-        private int _borderSize = 0;
-        private bool _showShadow = false;
+        private Color _borderColor = ThemeManager.BorderDefault;
+        private int _borderSize = 1;
 
         public int Radius { get => _radius; set { _radius = value; Invalidate(); } }
         public Color BorderColor { get => _borderColor; set { _borderColor = value; Invalidate(); } }
         public int BorderSize { get => _borderSize; set { _borderSize = value; Invalidate(); } }
-        public bool ShowGlow { get => _showShadow; set { _showShadow = value; Invalidate(); } }
-        public Color GlowColor { get; set; } = Color.Transparent;
-        public int GlowSize { get; set; } = 0;
+        public bool ShowGlow { get; set; }
+        public Color GlowColor { get; set; }
+        public int GlowSize { get; set; }
 
         public GlassPanel()
         {
@@ -604,59 +816,23 @@ namespace DevNooTools
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
                      ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
                      ControlStyles.SupportsTransparentBackColor, true);
-            BackColor = LightTheme.BgSidebar;
+            BackColor = ThemeManager.BgPrimary;
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-            if (_radius > 0)
+            using (var brush = new SolidBrush(BackColor))
             {
-                Color clearColor = RoundedHelper.GetActualParentBackColor(this);
-                using (var clearBrush = new SolidBrush(clearColor))
-                {
-                    e.Graphics.FillRectangle(clearBrush, ClientRectangle);
-                }
-
-                int padding = _showShadow ? 4 : 0;
-                var rect = new Rectangle(padding, padding, Width - 1 - padding * 2, Height - 1 - padding * 2);
-
-                if (_showShadow)
-                {
-                    RoundedHelper.DrawShadow(e.Graphics, rect, _radius, 4);
-                }
-
-                using (var path = RoundedHelper.CreateRoundedRectangle(rect, _radius))
-                {
-                    using (var brush = new SolidBrush(BackColor))
-                    {
-                        e.Graphics.FillPath(brush, path);
-                    }
-
-                    if (_borderSize > 0)
-                    {
-                        using (var pen = new Pen(_borderColor, _borderSize))
-                        {
-                            e.Graphics.DrawPath(pen, path);
-                        }
-                    }
-                }
+                e.Graphics.FillRectangle(brush, ClientRectangle);
             }
-            else
-            {
-                using (var brush = new SolidBrush(BackColor))
-                {
-                    e.Graphics.FillRectangle(brush, ClientRectangle);
-                }
 
-                // Right border line for sidebar
-                if (_borderSize > 0)
+            if (_borderSize > 0)
+            {
+                using (var pen = new Pen(_borderColor, _borderSize))
                 {
-                    using (var pen = new Pen(_borderColor, _borderSize))
-                    {
-                        e.Graphics.DrawLine(pen, Width - 1, 0, Width - 1, Height);
-                    }
+                    e.Graphics.DrawLine(pen, Width - 1, 0, Width - 1, Height);
                 }
             }
         }
