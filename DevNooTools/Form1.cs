@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -22,12 +21,12 @@ namespace DevNooTools
         // Euro culture for currency formatting
         private static readonly CultureInfo EuroCulture = new CultureInfo("de-DE");
 
-        // Theme colors
-        private static readonly Color BgDark = Color.FromArgb(15, 17, 26);
-        private static readonly Color BgCard = Color.FromArgb(26, 31, 48);
-        private static readonly Color TextPrimary = Color.FromArgb(248, 250, 252);
-        private static readonly Color TextSecondary = Color.FromArgb(148, 163, 184);
-        private static readonly Color AccentPrimary = Color.FromArgb(99, 102, 241);
+        // Light Theme colors
+        private static readonly Color BgPrimary = Color.FromArgb(250, 251, 252);
+        private static readonly Color BgWhite = Color.FromArgb(255, 255, 255);
+        private static readonly Color TextPrimary = Color.FromArgb(17, 24, 39);
+        private static readonly Color TextSecondary = Color.FromArgb(107, 114, 128);
+        private static readonly Color AccentBlue = Color.FromArgb(59, 130, 246);
         private static readonly Color AccentSuccess = Color.FromArgb(34, 197, 94);
         private static readonly Color AccentDanger = Color.FromArgb(239, 68, 68);
 
@@ -35,6 +34,12 @@ namespace DevNooTools
         {
             InitializeComponent();
             this.Load += Form1_Load;
+            
+            // Enable double buffering for smooth rendering
+            this.SetStyle(ControlStyles.OptimizedDoubleBuffer | 
+                          ControlStyles.AllPaintingInWmPaint | 
+                          ControlStyles.UserPaint, true);
+            this.UpdateStyles();
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -54,7 +59,7 @@ namespace DevNooTools
                 ClearFields();
 
                 // Initialize search placeholder visually
-                if (string.IsNullOrWhiteSpace(textSearch.Text))
+                if (string.IsNullOrWhiteSpace(textSearch.Text) || textSearch.Text == SearchPlaceholder)
                 {
                     textSearch.Text = SearchPlaceholder;
                     textSearch.ForeColor = TextSecondary;
@@ -79,26 +84,26 @@ namespace DevNooTools
         {
             if (dataGridViewProducts == null) return;
 
-            // Header style
-            dataGridViewProducts.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(31, 41, 55);
-            dataGridViewProducts.ColumnHeadersDefaultCellStyle.ForeColor = TextPrimary;
-            dataGridViewProducts.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            // Header style - Light theme
+            dataGridViewProducts.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(249, 250, 251);
+            dataGridViewProducts.ColumnHeadersDefaultCellStyle.ForeColor = TextSecondary;
+            dataGridViewProducts.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
             dataGridViewProducts.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
             dataGridViewProducts.ColumnHeadersDefaultCellStyle.Padding = new Padding(12, 0, 0, 0);
 
             // Cell style
-            dataGridViewProducts.DefaultCellStyle.BackColor = BgCard;
+            dataGridViewProducts.DefaultCellStyle.BackColor = BgWhite;
             dataGridViewProducts.DefaultCellStyle.ForeColor = TextPrimary;
             dataGridViewProducts.DefaultCellStyle.Font = new Font("Segoe UI", 10F);
-            dataGridViewProducts.DefaultCellStyle.SelectionBackColor = AccentPrimary;
-            dataGridViewProducts.DefaultCellStyle.SelectionForeColor = Color.White;
+            dataGridViewProducts.DefaultCellStyle.SelectionBackColor = Color.FromArgb(239, 246, 255);
+            dataGridViewProducts.DefaultCellStyle.SelectionForeColor = AccentBlue;
             dataGridViewProducts.DefaultCellStyle.Padding = new Padding(12, 8, 8, 8);
 
             // Alternate row style
-            dataGridViewProducts.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(22, 27, 42);
+            dataGridViewProducts.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(249, 250, 251);
             dataGridViewProducts.AlternatingRowsDefaultCellStyle.ForeColor = TextPrimary;
-            dataGridViewProducts.AlternatingRowsDefaultCellStyle.SelectionBackColor = AccentPrimary;
-            dataGridViewProducts.AlternatingRowsDefaultCellStyle.SelectionForeColor = Color.White;
+            dataGridViewProducts.AlternatingRowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(239, 246, 255);
+            dataGridViewProducts.AlternatingRowsDefaultCellStyle.SelectionForeColor = AccentBlue;
 
             dataGridViewProducts.AutoGenerateColumns = true;
         }
@@ -115,16 +120,6 @@ namespace DevNooTools
             // Low stock (quantity <= 5)
             int lowStock = allProducts.Count(p => p.Quantity <= 5);
             labelCardLowStockValue.Text = lowStock.ToString();
-            
-            // Change color based on low stock
-            if (lowStock > 0)
-            {
-                labelCardLowStockValue.ForeColor = AccentDanger;
-            }
-            else
-            {
-                labelCardLowStockValue.ForeColor = AccentSuccess;
-            }
             
             // Categories count (unique descriptions)
             int categories = allProducts.Select(p => p.Description).Where(d => !string.IsNullOrWhiteSpace(d)).Distinct().Count();
