@@ -97,9 +97,13 @@ namespace DevNooTools
             System.Drawing.Color bgHover = System.Drawing.Color.FromArgb(48, 54, 61);
             
             System.Drawing.Color accentBlue = System.Drawing.Color.FromArgb(56, 139, 253);
+            System.Drawing.Color accentBlueDark = System.Drawing.Color.FromArgb(31, 111, 235);
             System.Drawing.Color accentGreen = System.Drawing.Color.FromArgb(46, 160, 67);
+            System.Drawing.Color accentGreenDark = System.Drawing.Color.FromArgb(35, 134, 54);
             System.Drawing.Color accentOrange = System.Drawing.Color.FromArgb(227, 98, 9);
+            System.Drawing.Color accentOrangeDark = System.Drawing.Color.FromArgb(191, 87, 0);
             System.Drawing.Color accentPurple = System.Drawing.Color.FromArgb(130, 80, 223);
+            System.Drawing.Color accentPurpleDark = System.Drawing.Color.FromArgb(110, 64, 201);
             System.Drawing.Color accentRed = System.Drawing.Color.FromArgb(218, 54, 51);
             
             System.Drawing.Color textPrimary = System.Drawing.Color.FromArgb(230, 237, 243);
@@ -508,27 +512,28 @@ namespace DevNooTools
             this.panelCards.Size = new System.Drawing.Size(872, 116);
             this.panelCards.TabIndex = 1;
             // 
-            // cardTotal - Blue gradient
+            // cardTotal - Blue accent border
             // 
-            this.cardTotal.GradientStartColor = System.Drawing.Color.FromArgb(56, 139, 253);
-            this.cardTotal.GradientEndColor = System.Drawing.Color.FromArgb(31, 111, 235);
+            this.cardTotal.GradientStartColor = accentBlue;
+            this.cardTotal.GradientEndColor = accentBlueDark;
+            this.cardTotal.AccentWidth = 4;
             this.cardTotal.Controls.Add(this.labelCardTotalValue);
             this.cardTotal.Controls.Add(this.labelCardTotalTitle);
             this.cardTotal.Controls.Add(this.labelCardTotalIcon);
             this.cardTotal.Location = new System.Drawing.Point(0, 8);
             this.cardTotal.Name = "cardTotal";
             this.cardTotal.Radius = 12;
-            this.cardTotal.Size = new System.Drawing.Size(205, 96);
+            this.cardTotal.Size = new System.Drawing.Size(205, 100);
             this.cardTotal.TabIndex = 0;
             // 
             // labelCardTotalIcon
             // 
             this.labelCardTotalIcon.BackColor = System.Drawing.Color.Transparent;
-            this.labelCardTotalIcon.Font = new System.Drawing.Font("Segoe UI", 11F);
-            this.labelCardTotalIcon.ForeColor = System.Drawing.Color.FromArgb(220, 255, 255, 255);
-            this.labelCardTotalIcon.Location = new System.Drawing.Point(16, 12);
+            this.labelCardTotalIcon.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.labelCardTotalIcon.ForeColor = textSecondary;
+            this.labelCardTotalIcon.Location = new System.Drawing.Point(20, 16);
             this.labelCardTotalIcon.Name = "labelCardTotalIcon";
-            this.labelCardTotalIcon.Size = new System.Drawing.Size(173, 20);
+            this.labelCardTotalIcon.Size = new System.Drawing.Size(170, 18);
             this.labelCardTotalIcon.TabIndex = 0;
             this.labelCardTotalIcon.Text = "Total Produtos";
             // 
@@ -544,34 +549,35 @@ namespace DevNooTools
             // 
             this.labelCardTotalValue.BackColor = System.Drawing.Color.Transparent;
             this.labelCardTotalValue.Font = new System.Drawing.Font("Segoe UI", 28F, System.Drawing.FontStyle.Bold);
-            this.labelCardTotalValue.ForeColor = System.Drawing.Color.White;
-            this.labelCardTotalValue.Location = new System.Drawing.Point(12, 38);
+            this.labelCardTotalValue.ForeColor = accentBlue;
+            this.labelCardTotalValue.Location = new System.Drawing.Point(14, 38);
             this.labelCardTotalValue.Name = "labelCardTotalValue";
             this.labelCardTotalValue.Size = new System.Drawing.Size(180, 52);
             this.labelCardTotalValue.TabIndex = 2;
             this.labelCardTotalValue.Text = "0";
             // 
-            // cardValue - Green gradient
+            // cardValue - Green accent border
             // 
-            this.cardValue.GradientStartColor = System.Drawing.Color.FromArgb(46, 160, 67);
-            this.cardValue.GradientEndColor = System.Drawing.Color.FromArgb(35, 134, 54);
+            this.cardValue.GradientStartColor = accentGreen;
+            this.cardValue.GradientEndColor = accentGreenDark;
+            this.cardValue.AccentWidth = 4;
             this.cardValue.Controls.Add(this.labelCardValueValue);
             this.cardValue.Controls.Add(this.labelCardValueTitle);
             this.cardValue.Controls.Add(this.labelCardValueIcon);
             this.cardValue.Location = new System.Drawing.Point(222, 8);
             this.cardValue.Name = "cardValue";
             this.cardValue.Radius = 12;
-            this.cardValue.Size = new System.Drawing.Size(205, 96);
+            this.cardValue.Size = new System.Drawing.Size(205, 100);
             this.cardValue.TabIndex = 1;
             // 
             // labelCardValueIcon
             // 
             this.labelCardValueIcon.BackColor = System.Drawing.Color.Transparent;
-            this.labelCardValueIcon.Font = new System.Drawing.Font("Segoe UI", 11F);
-            this.labelCardValueIcon.ForeColor = System.Drawing.Color.FromArgb(220, 255, 255, 255);
-            this.labelCardValueIcon.Location = new System.Drawing.Point(16, 12);
+            this.labelCardValueIcon.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.labelCardValueIcon.ForeColor = textSecondary;
+            this.labelCardValueIcon.Location = new System.Drawing.Point(20, 16);
             this.labelCardValueIcon.Name = "labelCardValueIcon";
-            this.labelCardValueIcon.Size = new System.Drawing.Size(173, 20);
+            this.labelCardValueIcon.Size = new System.Drawing.Size(170, 18);
             this.labelCardValueIcon.TabIndex = 0;
             this.labelCardValueIcon.Text = "Valor Estoque";
             // 
@@ -587,34 +593,35 @@ namespace DevNooTools
             // 
             this.labelCardValueValue.BackColor = System.Drawing.Color.Transparent;
             this.labelCardValueValue.Font = new System.Drawing.Font("Segoe UI", 20F, System.Drawing.FontStyle.Bold);
-            this.labelCardValueValue.ForeColor = System.Drawing.Color.White;
-            this.labelCardValueValue.Location = new System.Drawing.Point(14, 42);
+            this.labelCardValueValue.ForeColor = accentGreen;
+            this.labelCardValueValue.Location = new System.Drawing.Point(16, 42);
             this.labelCardValueValue.Name = "labelCardValueValue";
-            this.labelCardValueValue.Size = new System.Drawing.Size(178, 48);
+            this.labelCardValueValue.Size = new System.Drawing.Size(176, 48);
             this.labelCardValueValue.TabIndex = 2;
             this.labelCardValueValue.Text = "0,00 €";
             // 
-            // cardLowStock - Orange gradient
+            // cardLowStock - Orange accent border
             // 
-            this.cardLowStock.GradientStartColor = System.Drawing.Color.FromArgb(227, 98, 9);
-            this.cardLowStock.GradientEndColor = System.Drawing.Color.FromArgb(191, 87, 0);
+            this.cardLowStock.GradientStartColor = accentOrange;
+            this.cardLowStock.GradientEndColor = accentOrangeDark;
+            this.cardLowStock.AccentWidth = 4;
             this.cardLowStock.Controls.Add(this.labelCardLowStockValue);
             this.cardLowStock.Controls.Add(this.labelCardLowStockTitle);
             this.cardLowStock.Controls.Add(this.labelCardLowStockIcon);
             this.cardLowStock.Location = new System.Drawing.Point(444, 8);
             this.cardLowStock.Name = "cardLowStock";
             this.cardLowStock.Radius = 12;
-            this.cardLowStock.Size = new System.Drawing.Size(205, 96);
+            this.cardLowStock.Size = new System.Drawing.Size(205, 100);
             this.cardLowStock.TabIndex = 2;
             // 
             // labelCardLowStockIcon
             // 
             this.labelCardLowStockIcon.BackColor = System.Drawing.Color.Transparent;
-            this.labelCardLowStockIcon.Font = new System.Drawing.Font("Segoe UI", 11F);
-            this.labelCardLowStockIcon.ForeColor = System.Drawing.Color.FromArgb(220, 255, 255, 255);
-            this.labelCardLowStockIcon.Location = new System.Drawing.Point(16, 12);
+            this.labelCardLowStockIcon.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.labelCardLowStockIcon.ForeColor = textSecondary;
+            this.labelCardLowStockIcon.Location = new System.Drawing.Point(20, 16);
             this.labelCardLowStockIcon.Name = "labelCardLowStockIcon";
-            this.labelCardLowStockIcon.Size = new System.Drawing.Size(173, 20);
+            this.labelCardLowStockIcon.Size = new System.Drawing.Size(170, 18);
             this.labelCardLowStockIcon.TabIndex = 0;
             this.labelCardLowStockIcon.Text = "Estoque Baixo";
             // 
@@ -630,34 +637,35 @@ namespace DevNooTools
             // 
             this.labelCardLowStockValue.BackColor = System.Drawing.Color.Transparent;
             this.labelCardLowStockValue.Font = new System.Drawing.Font("Segoe UI", 28F, System.Drawing.FontStyle.Bold);
-            this.labelCardLowStockValue.ForeColor = System.Drawing.Color.White;
-            this.labelCardLowStockValue.Location = new System.Drawing.Point(12, 38);
+            this.labelCardLowStockValue.ForeColor = accentOrange;
+            this.labelCardLowStockValue.Location = new System.Drawing.Point(14, 38);
             this.labelCardLowStockValue.Name = "labelCardLowStockValue";
             this.labelCardLowStockValue.Size = new System.Drawing.Size(180, 52);
             this.labelCardLowStockValue.TabIndex = 2;
             this.labelCardLowStockValue.Text = "0";
             // 
-            // cardCategories - Purple gradient
+            // cardCategories - Purple accent border
             // 
-            this.cardCategories.GradientStartColor = System.Drawing.Color.FromArgb(130, 80, 223);
-            this.cardCategories.GradientEndColor = System.Drawing.Color.FromArgb(110, 64, 201);
+            this.cardCategories.GradientStartColor = accentPurple;
+            this.cardCategories.GradientEndColor = accentPurpleDark;
+            this.cardCategories.AccentWidth = 4;
             this.cardCategories.Controls.Add(this.labelCardCategoriesValue);
             this.cardCategories.Controls.Add(this.labelCardCategoriesTitle);
             this.cardCategories.Controls.Add(this.labelCardCategoriesIcon);
             this.cardCategories.Location = new System.Drawing.Point(666, 8);
             this.cardCategories.Name = "cardCategories";
             this.cardCategories.Radius = 12;
-            this.cardCategories.Size = new System.Drawing.Size(205, 96);
+            this.cardCategories.Size = new System.Drawing.Size(205, 100);
             this.cardCategories.TabIndex = 3;
             // 
             // labelCardCategoriesIcon
             // 
             this.labelCardCategoriesIcon.BackColor = System.Drawing.Color.Transparent;
-            this.labelCardCategoriesIcon.Font = new System.Drawing.Font("Segoe UI", 11F);
-            this.labelCardCategoriesIcon.ForeColor = System.Drawing.Color.FromArgb(220, 255, 255, 255);
-            this.labelCardCategoriesIcon.Location = new System.Drawing.Point(16, 12);
+            this.labelCardCategoriesIcon.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.labelCardCategoriesIcon.ForeColor = textSecondary;
+            this.labelCardCategoriesIcon.Location = new System.Drawing.Point(20, 16);
             this.labelCardCategoriesIcon.Name = "labelCardCategoriesIcon";
-            this.labelCardCategoriesIcon.Size = new System.Drawing.Size(173, 20);
+            this.labelCardCategoriesIcon.Size = new System.Drawing.Size(170, 18);
             this.labelCardCategoriesIcon.TabIndex = 0;
             this.labelCardCategoriesIcon.Text = "Categorias";
             // 
@@ -673,8 +681,8 @@ namespace DevNooTools
             // 
             this.labelCardCategoriesValue.BackColor = System.Drawing.Color.Transparent;
             this.labelCardCategoriesValue.Font = new System.Drawing.Font("Segoe UI", 28F, System.Drawing.FontStyle.Bold);
-            this.labelCardCategoriesValue.ForeColor = System.Drawing.Color.White;
-            this.labelCardCategoriesValue.Location = new System.Drawing.Point(12, 38);
+            this.labelCardCategoriesValue.ForeColor = accentPurple;
+            this.labelCardCategoriesValue.Location = new System.Drawing.Point(14, 38);
             this.labelCardCategoriesValue.Name = "labelCardCategoriesValue";
             this.labelCardCategoriesValue.Size = new System.Drawing.Size(180, 52);
             this.labelCardCategoriesValue.TabIndex = 2;
@@ -698,7 +706,7 @@ namespace DevNooTools
             this.panelForm.Controls.Add(this.lblName);
             this.panelForm.Controls.Add(this.labelFormTitle);
             this.panelForm.Dock = System.Windows.Forms.DockStyle.Top;
-            this.panelForm.Location = new System.Drawing.Point(24, 196);
+            this.panelForm.Location = new System.Drawing.Point(24, 200);
             this.panelForm.Name = "panelForm";
             this.panelForm.Padding = new System.Windows.Forms.Padding(20);
             this.panelForm.Size = new System.Drawing.Size(872, 170);
@@ -824,7 +832,7 @@ namespace DevNooTools
             // btnAdd
             // 
             this.btnAdd.BackColor = accentGreen;
-            this.btnAdd.GradientEndColor = System.Drawing.Color.FromArgb(35, 134, 54);
+            this.btnAdd.GradientEndColor = accentGreenDark;
             this.btnAdd.UseGradient = true;
             this.btnAdd.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.btnAdd.ForeColor = System.Drawing.Color.White;
@@ -839,7 +847,7 @@ namespace DevNooTools
             // btnSave
             // 
             this.btnSave.BackColor = accentBlue;
-            this.btnSave.GradientEndColor = System.Drawing.Color.FromArgb(31, 111, 235);
+            this.btnSave.GradientEndColor = accentBlueDark;
             this.btnSave.UseGradient = true;
             this.btnSave.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.btnSave.ForeColor = System.Drawing.Color.White;
@@ -891,10 +899,10 @@ namespace DevNooTools
             this.panelGrid.Controls.Add(this.dataGridViewProducts);
             this.panelGrid.Controls.Add(this.labelGridTitle);
             this.panelGrid.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.panelGrid.Location = new System.Drawing.Point(24, 366);
+            this.panelGrid.Location = new System.Drawing.Point(24, 370);
             this.panelGrid.Name = "panelGrid";
             this.panelGrid.Padding = new System.Windows.Forms.Padding(16);
-            this.panelGrid.Size = new System.Drawing.Size(872, 334);
+            this.panelGrid.Size = new System.Drawing.Size(872, 330);
             this.panelGrid.TabIndex = 3;
             // 
             // labelGridTitle
@@ -932,7 +940,7 @@ namespace DevNooTools
             this.dataGridViewProducts.RowHeadersVisible = false;
             this.dataGridViewProducts.RowTemplate.Height = 42;
             this.dataGridViewProducts.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dataGridViewProducts.Size = new System.Drawing.Size(840, 266);
+            this.dataGridViewProducts.Size = new System.Drawing.Size(840, 262);
             this.dataGridViewProducts.TabIndex = 1;
             this.dataGridViewProducts.SelectionChanged += new System.EventHandler(this.dataGridViewProducts_SelectionChanged);
             // 

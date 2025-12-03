@@ -141,6 +141,20 @@ namespace DevNooTools
                 }
             }
         }
+
+        public static void DrawGlow(Graphics g, Rectangle rect, int radius, Color glowColor, int glowSize)
+        {
+            for (int i = glowSize; i > 0; i--)
+            {
+                var glowRect = new Rectangle(rect.X - i, rect.Y - i, rect.Width + i * 2, rect.Height + i * 2);
+                int alpha = (int)(30 * ((float)i / glowSize));
+                using (var path = CreateRoundedRectangle(glowRect, radius + i))
+                using (var pen = new Pen(Color.FromArgb(alpha, glowColor), 2))
+                {
+                    g.DrawPath(pen, path);
+                }
+            }
+        }
     }
 
     #endregion
@@ -427,7 +441,7 @@ namespace DevNooTools
 
     #endregion
 
-    #region Rounded Button
+    #region Animated Pulse Button
 
     public class RoundedButton : Button
     {
@@ -436,6 +450,11 @@ namespace DevNooTools
         private bool _isPressed = false;
         private bool _useGradient = true;
         private Color _gradientEndColor = Color.Empty;
+        private float _pulseProgress = 0f;
+        private float _scaleProgress = 1f;
+        private float _glowIntensity = 0f;
+        private Timer _pulseTimer;
+        private Timer _scaleTimer;
 
         public int Radius { get => _radius; set { _radius = value; Invalidate(); } }
         public bool UseGradient { get => _useGradient; set { _useGradient = value; Invalidate(); } }
@@ -451,12 +470,52 @@ namespace DevNooTools
                      ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
             Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             ForeColor = Color.White;
+
+            _pulseTimer = new Timer { Interval = 25 };
+            _pulseTimer.Tick += PulseTimer_Tick;
+
+            _scaleTimer = new Timer { Interval = 16 };
+            _scaleTimer.Tick += ScaleTimer_Tick;
+        }
+
+        private void PulseTimer_Tick(object sender, EventArgs e)
+        {
+            _pulseProgress += 0.05f;
+            if (_pulseProgress >= 1f)
+            {
+                _pulseProgress = 0f;
+            }
+            
+            // Smooth glow intensity
+            float targetGlow = _isHovering ? 1f : 0f;
+            _glowIntensity += (targetGlow - _glowIntensity) * 0.15f;
+            
+            Invalidate();
+        }
+
+        private void ScaleTimer_Tick(object sender, EventArgs e)
+        {
+            float target = _isHovering ? 1.03f : 1f;
+            float diff = target - _scaleProgress;
+            
+            if (Math.Abs(diff) < 0.003f)
+            {
+                _scaleProgress = target;
+                if (!_isHovering) _scaleTimer.Stop();
+            }
+            else
+            {
+                _scaleProgress += diff * 0.18f;
+            }
+            Invalidate();
         }
 
         protected override void OnMouseEnter(EventArgs e)
         {
             base.OnMouseEnter(e);
             _isHovering = true;
+            _pulseTimer.Start();
+            _scaleTimer.Start();
             Invalidate();
         }
 
@@ -464,7 +523,8 @@ namespace DevNooTools
         {
             base.OnMouseLeave(e);
             _isHovering = false;
-            _isPressed = false;
+            _scaleTimer.Start();
+            // Keep pulse timer running to animate glow fade out
             Invalidate();
         }
 
@@ -472,6 +532,7 @@ namespace DevNooTools
         {
             base.OnMouseDown(mevent);
             _isPressed = true;
+            _scaleProgress = 0.95f;
             Invalidate();
         }
 
@@ -479,6 +540,7 @@ namespace DevNooTools
         {
             base.OnMouseUp(mevent);
             _isPressed = false;
+            _scaleProgress = 1.03f;
             Invalidate();
         }
 
@@ -492,9 +554,35 @@ namespace DevNooTools
                 e.Graphics.FillRectangle(clearBrush, ClientRectangle);
             }
 
-            var rect = new Rectangle(0, 0, Width - 1, Height - 1);
+            // Calculate scaled rect
+            int scaleOffset = (int)((1f - _scaleProgress) * 4);
+            var rect = new Rectangle(scaleOffset + 2, scaleOffset + 2, Width - 5 - scaleOffset * 2, Height - 5 - scaleOffset * 2);
 
-            if (_isPressed) rect.Inflate(-1, -1);
+            // Draw outer pulse glow when hovering (expanding ring effect)
+            if (_glowIntensity > 0.01f && !_isPressed)
+            {
+                // Outer expanding pulse
+                int outerGlowAlpha = (int)(60 * (1f - _pulseProgress) * _glowIntensity);
+                int outerGlowSize = (int)(15 * _pulseProgress * _glowIntensity);
+                var outerGlowRect = new Rectangle(rect.X - outerGlowSize, rect.Y - outerGlowSize, 
+                    rect.Width + outerGlowSize * 2, rect.Height + outerGlowSize * 2);
+                
+                using (var glowPath = RoundedHelper.CreateRoundedRectangle(outerGlowRect, _radius + outerGlowSize))
+                using (var glowBrush = new SolidBrush(Color.FromArgb(outerGlowAlpha, BackColor)))
+                {
+                    e.Graphics.FillPath(glowBrush, glowPath);
+                }
+
+                // Static inner glow (always visible when hovering)
+                int innerGlowAlpha = (int)(40 * _glowIntensity);
+                var innerGlowRect = new Rectangle(rect.X - 4, rect.Y - 4, rect.Width + 8, rect.Height + 8);
+                
+                using (var glowPath = RoundedHelper.CreateRoundedRectangle(innerGlowRect, _radius + 4))
+                using (var glowBrush = new SolidBrush(Color.FromArgb(innerGlowAlpha, BackColor)))
+                {
+                    e.Graphics.FillPath(glowBrush, glowPath);
+                }
+            }
 
             using (var path = RoundedHelper.CreateRoundedRectangle(rect, _radius))
             {
@@ -503,13 +591,13 @@ namespace DevNooTools
 
                 if (_isHovering)
                 {
-                    startColor = RoundedHelper.LightenColor(startColor, 0.12f);
-                    endColor = RoundedHelper.LightenColor(endColor, 0.12f);
+                    startColor = RoundedHelper.LightenColor(startColor, 0.2f);
+                    endColor = RoundedHelper.LightenColor(endColor, 0.2f);
                 }
                 if (_isPressed)
                 {
-                    startColor = RoundedHelper.DarkenColor(BackColor, 0.1f);
-                    endColor = RoundedHelper.DarkenColor(endColor, 0.1f);
+                    startColor = RoundedHelper.DarkenColor(BackColor, 0.15f);
+                    endColor = RoundedHelper.DarkenColor(endColor, 0.15f);
                 }
 
                 if (_useGradient && rect.Height > 0 && rect.Width > 0)
@@ -526,16 +614,36 @@ namespace DevNooTools
                         e.Graphics.FillPath(brush, path);
                     }
                 }
+
+                // Draw subtle border when hovering
+                if (_glowIntensity > 0.1f)
+                {
+                    int borderAlpha = (int)(100 * _glowIntensity);
+                    using (var pen = new Pen(Color.FromArgb(borderAlpha, RoundedHelper.LightenColor(BackColor, 0.4f)), 1f))
+                    {
+                        e.Graphics.DrawPath(pen, path);
+                    }
+                }
             }
 
             TextRenderer.DrawText(e.Graphics, Text, Font, rect, ForeColor,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
         }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _pulseTimer?.Dispose();
+                _scaleTimer?.Dispose();
+            }
+            base.Dispose(disposing);
+        }
     }
 
     #endregion
 
-    #region Rounded TextBox
+    #region Rounded TextBox with Hover Pulse Effect
 
     public class RoundedTextBox : UserControl
     {
@@ -544,6 +652,10 @@ namespace DevNooTools
         private Color _borderColor = ThemeManager.BorderDefault;
         private Color _focusBorderColor = ThemeManager.AccentBlue;
         private bool _isFocused = false;
+        private bool _isHovering = false;
+        private float _pulseProgress = 0f;
+        private float _glowIntensity = 0f;
+        private Timer _pulseTimer;
 
         public int Radius { get => _radius; set { _radius = value; Invalidate(); } }
         public Color BorderColor { get => _borderColor; set { _borderColor = value; Invalidate(); } }
@@ -596,9 +708,71 @@ namespace DevNooTools
 
             _textBox.Enter += (s, e) => { _isFocused = true; Invalidate(); };
             _textBox.Leave += (s, e) => { _isFocused = false; Invalidate(); };
+            _textBox.MouseEnter += (s, e) => { SetHovering(true); };
+            _textBox.MouseLeave += (s, e) => { CheckMouseLeave(); };
+
+            _pulseTimer = new Timer { Interval = 25 };
+            _pulseTimer.Tick += PulseTimer_Tick;
 
             Controls.Add(_textBox);
             Height = 36;
+        }
+
+        private void SetHovering(bool hovering)
+        {
+            if (_isHovering != hovering)
+            {
+                _isHovering = hovering;
+                if (hovering)
+                {
+                    _pulseTimer.Start();
+                }
+                Invalidate();
+            }
+        }
+
+        private void CheckMouseLeave()
+        {
+            Point mousePos = PointToClient(MousePosition);
+            if (!ClientRectangle.Contains(mousePos))
+            {
+                _isHovering = false;
+                Invalidate();
+            }
+        }
+
+        private void PulseTimer_Tick(object sender, EventArgs e)
+        {
+            _pulseProgress += 0.04f;
+            if (_pulseProgress >= 1f)
+            {
+                _pulseProgress = 0f;
+            }
+            
+            // Smooth glow intensity
+            float targetGlow = (_isHovering || _isFocused) ? 1f : 0f;
+            _glowIntensity += (targetGlow - _glowIntensity) * 0.12f;
+            
+            // Stop timer when glow faded out
+            if (!_isHovering && !_isFocused && _glowIntensity < 0.01f)
+            {
+                _pulseTimer.Stop();
+                _glowIntensity = 0f;
+            }
+            
+            Invalidate();
+        }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            base.OnMouseEnter(e);
+            SetHovering(true);
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            CheckMouseLeave();
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -611,17 +785,56 @@ namespace DevNooTools
                 e.Graphics.FillRectangle(clearBrush, ClientRectangle);
             }
 
-            var rect = new Rectangle(0, 0, Width - 1, Height - 1);
+            var rect = new Rectangle(2, 2, Width - 5, Height - 5);
+
+            // Draw pulse glow when hovering (not focused)
+            if (_glowIntensity > 0.01f && !_isFocused)
+            {
+                // Outer expanding pulse
+                int outerGlowAlpha = (int)(35 * (1f - _pulseProgress) * _glowIntensity);
+                int outerGlowSize = (int)(12 * _pulseProgress * _glowIntensity);
+                var outerGlowRect = new Rectangle(rect.X - outerGlowSize, rect.Y - outerGlowSize, 
+                    rect.Width + outerGlowSize * 2, rect.Height + outerGlowSize * 2);
+                
+                using (var glowPath = RoundedHelper.CreateRoundedRectangle(outerGlowRect, _radius + outerGlowSize))
+                using (var glowBrush = new SolidBrush(Color.FromArgb(outerGlowAlpha, _focusBorderColor)))
+                {
+                    e.Graphics.FillPath(glowBrush, glowPath);
+                }
+
+                // Static inner glow
+                int innerGlowAlpha = (int)(25 * _glowIntensity);
+                var innerGlowRect = new Rectangle(rect.X - 3, rect.Y - 3, rect.Width + 6, rect.Height + 6);
+                
+                using (var glowPath = RoundedHelper.CreateRoundedRectangle(innerGlowRect, _radius + 3))
+                using (var glowBrush = new SolidBrush(Color.FromArgb(innerGlowAlpha, _focusBorderColor)))
+                {
+                    e.Graphics.FillPath(glowBrush, glowPath);
+                }
+            }
+
+            // Draw static glow when focused
+            if (_isFocused)
+            {
+                RoundedHelper.DrawGlow(e.Graphics, rect, _radius, _focusBorderColor, 5);
+            }
 
             using (var path = RoundedHelper.CreateRoundedRectangle(rect, _radius))
             {
-                using (var brush = new SolidBrush(BackColor))
+                // Lighten background on hover
+                Color bgColor = BackColor;
+                if (_isHovering && !_isFocused)
+                {
+                    bgColor = RoundedHelper.LightenColor(BackColor, 0.05f);
+                }
+                
+                using (var brush = new SolidBrush(bgColor))
                 {
                     e.Graphics.FillPath(brush, path);
                 }
 
-                Color borderColor = _isFocused ? _focusBorderColor : _borderColor;
-                float borderWidth = _isFocused ? 2f : 1f;
+                Color borderColor = _isFocused ? _focusBorderColor : (_isHovering ? _focusBorderColor : _borderColor);
+                float borderWidth = _isFocused ? 2f : (_isHovering ? 1.5f : 1f);
 
                 using (var pen = new Pen(borderColor, borderWidth))
                 {
@@ -656,11 +869,17 @@ namespace DevNooTools
         }
 
         public new void Focus() => _textBox?.Focus();
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) _pulseTimer?.Dispose();
+            base.Dispose(disposing);
+        }
     }
 
     #endregion
 
-    #region Gradient Card
+    #region Stat Card with Full Area Hover Pulse Effect
 
     public class GradientCard : Panel
     {
@@ -668,13 +887,19 @@ namespace DevNooTools
         private Color _gradientStartColor = ThemeManager.AccentBlue;
         private Color _gradientEndColor = ThemeManager.AccentBlueDark;
         private bool _showShadow = true;
+        private bool _isHovering = false;
+        private float _pulseProgress = 0f;
+        private float _scaleProgress = 1f;
+        private Timer _pulseTimer;
+        private Timer _scaleTimer;
+        private int _accentWidth = 4;
 
         public int Radius { get => _radius; set { _radius = value; Invalidate(); } }
         public Color GradientStartColor { get => _gradientStartColor; set { _gradientStartColor = value; Invalidate(); } }
         public Color GradientEndColor { get => _gradientEndColor; set { _gradientEndColor = value; Invalidate(); } }
         public Color BorderColor { get; set; }
-        public Color AccentColor { get; set; }
-        public int AccentWidth { get; set; }
+        public Color AccentColor { get => _gradientStartColor; set { _gradientStartColor = value; Invalidate(); } }
+        public int AccentWidth { get => _accentWidth; set { _accentWidth = value; Invalidate(); } }
         public bool ShowShadow { get => _showShadow; set { _showShadow = value; Invalidate(); } }
 
         public GradientCard()
@@ -683,6 +908,102 @@ namespace DevNooTools
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
                      ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
                      ControlStyles.SupportsTransparentBackColor, true);
+            Cursor = Cursors.Default;
+
+            _pulseTimer = new Timer { Interval = 30 };
+            _pulseTimer.Tick += PulseTimer_Tick;
+
+            _scaleTimer = new Timer { Interval = 16 };
+            _scaleTimer.Tick += ScaleTimer_Tick;
+
+            // Hook child controls for mouse events
+            ControlAdded += GradientCard_ControlAdded;
+        }
+
+        private void GradientCard_ControlAdded(object sender, ControlEventArgs e)
+        {
+            // Subscribe to mouse events of child controls
+            e.Control.MouseEnter += ChildControl_MouseEnter;
+            e.Control.MouseLeave += ChildControl_MouseLeave;
+        }
+
+        private void ChildControl_MouseEnter(object sender, EventArgs e)
+        {
+            if (!_isHovering)
+            {
+                _isHovering = true;
+                _pulseTimer.Start();
+                _scaleTimer.Start();
+                Invalidate();
+            }
+        }
+
+        private void ChildControl_MouseLeave(object sender, EventArgs e)
+        {
+            // Check if mouse is still within the card bounds
+            Point mousePos = PointToClient(MousePosition);
+            if (!ClientRectangle.Contains(mousePos))
+            {
+                _isHovering = false;
+                _pulseTimer.Stop();
+                _pulseProgress = 0f;
+                _scaleTimer.Start();
+                Invalidate();
+            }
+        }
+
+        private void PulseTimer_Tick(object sender, EventArgs e)
+        {
+            _pulseProgress += 0.04f;
+            if (_pulseProgress >= 1f)
+            {
+                _pulseProgress = 0f;
+            }
+            Invalidate();
+        }
+
+        private void ScaleTimer_Tick(object sender, EventArgs e)
+        {
+            float target = _isHovering ? 1.015f : 1f;
+            float diff = target - _scaleProgress;
+            
+            if (Math.Abs(diff) < 0.002f)
+            {
+                _scaleProgress = target;
+                if (!_isHovering) _scaleTimer.Stop();
+            }
+            else
+            {
+                _scaleProgress += diff * 0.12f;
+            }
+            Invalidate();
+        }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            base.OnMouseEnter(e);
+            if (!_isHovering)
+            {
+                _isHovering = true;
+                _pulseTimer.Start();
+                _scaleTimer.Start();
+                Invalidate();
+            }
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            // Check if mouse is still within the card bounds (might be over a child control)
+            Point mousePos = PointToClient(MousePosition);
+            if (!ClientRectangle.Contains(mousePos))
+            {
+                _isHovering = false;
+                _pulseTimer.Stop();
+                _pulseProgress = 0f;
+                _scaleTimer.Start();
+                Invalidate();
+            }
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -695,29 +1016,91 @@ namespace DevNooTools
                 e.Graphics.FillRectangle(clearBrush, ClientRectangle);
             }
 
-            int padding = _showShadow ? 4 : 0;
-            var rect = new Rectangle(padding, padding, Width - 1 - padding * 2, Height - 1 - padding * 2);
+            int padding = _showShadow ? 6 : 2;
+            
+            // Calculate scaled rect
+            int scaleOffset = (int)((1f - _scaleProgress) * 2);
+            var rect = new Rectangle(padding + scaleOffset, padding + scaleOffset, 
+                Width - 1 - (padding + scaleOffset) * 2, Height - 1 - (padding + scaleOffset) * 2);
 
-            if (_showShadow)
+            // Draw pulsing glow when hovering
+            if (_isHovering)
             {
-                RoundedHelper.DrawShadow(e.Graphics, rect, _radius, 5, 18);
+                int glowAlpha = (int)(45 * (1f - _pulseProgress));
+                int glowSize = (int)(18 * _pulseProgress);
+                var glowRect = new Rectangle(rect.X - glowSize, rect.Y - glowSize, 
+                    rect.Width + glowSize * 2, rect.Height + glowSize * 2);
+                
+                using (var glowPath = RoundedHelper.CreateRoundedRectangle(glowRect, _radius + glowSize))
+                using (var glowBrush = new SolidBrush(Color.FromArgb(glowAlpha, _gradientStartColor)))
+                {
+                    e.Graphics.FillPath(glowBrush, glowPath);
+                }
             }
 
-            if (rect.Width > 0 && rect.Height > 0)
+            // Draw shadow when not hovering
+            if (_showShadow && !_isHovering)
             {
-                using (var path = RoundedHelper.CreateRoundedRectangle(rect, _radius))
-                using (var brush = new LinearGradientBrush(rect, _gradientStartColor, _gradientEndColor,
-                    LinearGradientMode.Vertical))
+                RoundedHelper.DrawShadow(e.Graphics, rect, _radius, 4, 15);
+            }
+
+            // Draw card background (dark)
+            Color bgColor = ThemeManager.IsDarkTheme 
+                ? Color.FromArgb(22, 27, 34) 
+                : Color.FromArgb(255, 255, 255);
+            
+            if (_isHovering)
+            {
+                bgColor = ThemeManager.IsDarkTheme 
+                    ? Color.FromArgb(30, 35, 44) 
+                    : Color.FromArgb(250, 250, 255);
+            }
+
+            using (var path = RoundedHelper.CreateRoundedRectangle(rect, _radius))
+            {
+                using (var brush = new SolidBrush(bgColor))
                 {
                     e.Graphics.FillPath(brush, path);
                 }
+
+                // Draw border - changes color on hover
+                Color borderCol = _isHovering ? _gradientStartColor : ThemeManager.BorderDefault;
+                float borderWidth = _isHovering ? 2f : 1f;
+                using (var pen = new Pen(borderCol, borderWidth))
+                {
+                    e.Graphics.DrawPath(pen, path);
+                }
             }
+
+            // Draw left accent bar with gradient
+            if (rect.Height > 24)
+            {
+                var accentRect = new Rectangle(rect.X, rect.Y + 12, _accentWidth, rect.Height - 24);
+                if (accentRect.Height > 0 && accentRect.Width > 0)
+                {
+                    using (var accentPath = RoundedHelper.CreateRoundedRectangle(accentRect, 2))
+                    using (var brush = new LinearGradientBrush(accentRect, _gradientStartColor, _gradientEndColor, LinearGradientMode.Vertical))
+                    {
+                        e.Graphics.FillPath(brush, accentPath);
+                    }
+                }
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _pulseTimer?.Dispose();
+                _scaleTimer?.Dispose();
+            }
+            base.Dispose(disposing);
         }
     }
 
     #endregion
 
-    #region Nav Panel
+    #region Nav Panel with Hover Effect
 
     public class NavPanel : Panel
     {
@@ -726,6 +1109,8 @@ namespace DevNooTools
         private bool _isSelected = false;
         private Color _hoverColor = ThemeManager.BgHover;
         private Color _selectedColor = ThemeManager.AccentBlue;
+        private float _hoverProgress = 0f;
+        private Timer _hoverTimer;
 
         public int Radius { get => _radius; set { _radius = value; Invalidate(); } }
         public bool IsSelected { get => _isSelected; set { _isSelected = value; Invalidate(); } }
@@ -739,20 +1124,79 @@ namespace DevNooTools
                      ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
                      ControlStyles.SupportsTransparentBackColor, true);
             Cursor = Cursors.Hand;
+
+            _hoverTimer = new Timer { Interval = 16 };
+            _hoverTimer.Tick += HoverTimer_Tick;
+
+            // Hook child controls for mouse events
+            ControlAdded += NavPanel_ControlAdded;
+        }
+
+        private void NavPanel_ControlAdded(object sender, ControlEventArgs e)
+        {
+            e.Control.MouseEnter += ChildControl_MouseEnter;
+            e.Control.MouseLeave += ChildControl_MouseLeave;
+        }
+
+        private void ChildControl_MouseEnter(object sender, EventArgs e)
+        {
+            if (!_isHovering)
+            {
+                _isHovering = true;
+                _hoverTimer.Start();
+                Invalidate();
+            }
+        }
+
+        private void ChildControl_MouseLeave(object sender, EventArgs e)
+        {
+            Point mousePos = PointToClient(MousePosition);
+            if (!ClientRectangle.Contains(mousePos))
+            {
+                _isHovering = false;
+                _hoverTimer.Start();
+                Invalidate();
+            }
+        }
+
+        private void HoverTimer_Tick(object sender, EventArgs e)
+        {
+            float target = _isHovering ? 1f : 0f;
+            float diff = target - _hoverProgress;
+            
+            if (Math.Abs(diff) < 0.05f)
+            {
+                _hoverProgress = target;
+                if (!_isHovering && _hoverProgress == 0f) _hoverTimer.Stop();
+            }
+            else
+            {
+                _hoverProgress += diff * 0.2f;
+            }
+            Invalidate();
         }
 
         protected override void OnMouseEnter(EventArgs e)
         {
             base.OnMouseEnter(e);
-            _isHovering = true;
-            Invalidate();
+            if (!_isHovering)
+            {
+                _isHovering = true;
+                _hoverTimer.Start();
+                Invalidate();
+            }
         }
 
         protected override void OnMouseLeave(EventArgs e)
         {
             base.OnMouseLeave(e);
-            _isHovering = false;
-            Invalidate();
+            Point mousePos = PointToClient(MousePosition);
+            if (!ClientRectangle.Contains(mousePos))
+            {
+                _isHovering = false;
+                _hoverTimer.Start();
+                Invalidate();
+            }
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -782,14 +1226,21 @@ namespace DevNooTools
                     e.Graphics.FillPath(brush, accentPath);
                 }
             }
-            else if (_isHovering)
+            else if (_hoverProgress > 0)
             {
+                int alpha = (int)(255 * _hoverProgress);
                 using (var path = RoundedHelper.CreateRoundedRectangle(rect, _radius))
-                using (var brush = new SolidBrush(_hoverColor))
+                using (var brush = new SolidBrush(Color.FromArgb(alpha, _hoverColor)))
                 {
                     e.Graphics.FillPath(brush, path);
                 }
             }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) _hoverTimer?.Dispose();
+            base.Dispose(disposing);
         }
     }
 
