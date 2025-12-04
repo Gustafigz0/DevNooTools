@@ -26,5 +26,26 @@ namespace DevNooTools.Properties
                 return defaultInstance;
             }
         }
+
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Configuration.SpecialSettingAttribute(global::System.Configuration.SpecialSetting.ConnectionString)]
+        [global::System.Configuration.DefaultSettingValueAttribute("https://pnvalhgbvzccqtuncgqb.supabase.co")]
+        public string SupabaseUrl
+        {
+            get
+            {
+                return ((string)(this["SupabaseUrl"]));
+            }
+        }
+
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBudmFsaGdidnpjY3F0dW5jZ3FiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4NDQyMDIsImV4cCI6MjA4MDQyMDIwMn0.HjAs1cnvOf-ojlabNjv7Sxfmngn77BoMYNCxsH8VIx4")]
+        public string SupabaseAnonKey
+        {
+            get
+            {
+                return ((string)(this["SupabaseAnonKey"]));
+            }
+        }
     }
 }

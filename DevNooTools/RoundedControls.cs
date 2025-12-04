@@ -1,7 +1,9 @@
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Linq;
 using System.Windows.Forms;
+using System.Collections.Generic;
 
 namespace DevNooTools
 {
@@ -154,6 +156,229 @@ namespace DevNooTools
                     g.DrawPath(pen, path);
                 }
             }
+        }
+    }
+
+    #endregion
+
+    #region Hover Fader
+
+    public static class HoverFader
+    {
+        private class State
+        {
+            public Timer Timer;
+            public Color Original;
+            public Color Target;
+            public float Progress; // 0..1
+            public bool Hovering;
+            public float Intensity;
+        }
+
+        private static readonly Dictionary<Control, State> _states = new Dictionary<Control, State>();
+
+        public static void Attach(Control ctrl, float intensity = 0.08f, Color? hoverColor = null)
+        {
+            if (ctrl == null) return;
+            if (_states.ContainsKey(ctrl)) return;
+
+            var state = new State
+            {
+                Original = ctrl.BackColor,
+                Intensity = Math.Max(0f, Math.Min(0.6f, intensity)),
+                Progress = 0f,
+                Hovering = false
+            };
+            state.Target = hoverColor ?? RoundedHelper.LightenColor(state.Original, state.Intensity);
+
+            state.Timer = new Timer { Interval = 16 };
+            state.Timer.Tick += (s, e) =>
+            {
+                float speed = 0.18f;
+                if (state.Hovering)
+                {
+                    state.Progress += speed;
+                    if (state.Progress > 1f) state.Progress = 1f;
+                }
+                else
+                {
+                    state.Progress -= speed;
+                    if (state.Progress < 0f) state.Progress = 0f;
+                }
+
+                ctrl.BackColor = InterpolateColor(state.Original, state.Target, state.Progress);
+
+                if (!state.Hovering && state.Progress <= 0f)
+                {
+                    state.Timer.Stop();
+                    // restore exact original to avoid drift
+                    ctrl.BackColor = state.Original;
+                }
+            };
+
+            ctrl.MouseEnter += (s, e) =>
+            {
+                state.Hovering = true;
+                // recompute original/target in case theme changed
+                state.Original = ctrl.BackColor;
+                state.Target = hoverColor ?? RoundedHelper.LightenColor(state.Original, state.Intensity);
+                state.Timer.Start();
+            };
+
+            ctrl.MouseLeave += (s, e) =>
+            {
+                state.Hovering = false;
+                state.Timer.Start();
+            };
+
+            // If the control contains children that capture mouse, also attach to them so hover persists when over them
+            ctrl.ControlAdded += (s, e) => AttachRecursive(e.Control, intensity, hoverColor);
+
+            _states[ctrl] = state;
+        }
+
+        private static void AttachRecursive(Control ctrl, float intensity, Color? hoverColor)
+        {
+            Attach(ctrl, intensity, hoverColor);
+            foreach (Control c in ctrl.Controls)
+                AttachRecursive(c, intensity, hoverColor);
+        }
+
+        public static void AttachToAll(Control root, float intensity = 0.08f)
+        {
+            if (root == null) return;
+            foreach (Control c in GetAllControls(root))
+            {
+                // attach to buttons and custom interactive controls
+                if (c is Button || c is RoundedButton || c is NavPanel || c is GradientCard || c is RoundedPanel || c is RoundedTextBox || c is ToggleSwitch)
+                {
+                    Attach(c, intensity);
+                }
+            }
+        }
+
+        private static IEnumerable<Control> GetAllControls(Control root)
+        {
+            var stack = new Stack<Control>();
+            stack.Push(root);
+            while (stack.Count > 0)
+            {
+                var cur = stack.Pop();
+                yield return cur;
+                foreach (Control c in cur.Controls)
+                    stack.Push(c);
+            }
+        }
+
+        private static Color InterpolateColor(Color a, Color b, float t)
+        {
+            int r = (int)(a.R + (b.R - a.R) * t);
+            int g = (int)(a.G + (b.G - a.G) * t);
+            int bl = (int)(a.B + (b.B - a.B) * t);
+            int alpha = (int)(a.A + (b.A - a.A) * t);
+            return Color.FromArgb(alpha, r, g, bl);
+        }
+    }
+
+    #endregion
+
+    #region Toast Notification
+
+    public class ToastForm : Form
+    {
+        private Label _lblTitle;
+        private Label _lblMessage;
+        private Timer _closeTimer;
+        private float _progress = 0f;
+
+        private ToastForm(string title, string message)
+        {
+            FormBorderStyle = FormBorderStyle.None;
+            StartPosition = FormStartPosition.Manual;
+            ShowInTaskbar = false;
+            TopMost = true;
+            BackColor = ThemeManager.BgPrimary;
+            Opacity = 0.0;
+            Width = 320;
+            Height = 88;
+
+            _lblTitle = new Label
+            {
+                Text = title,
+                AutoSize = false,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = ThemeManager.TextPrimary,
+                Dock = DockStyle.Top,
+                Height = 22,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(12, 0, 12, 0)
+            };
+
+            _lblMessage = new Label
+            {
+                Text = message,
+                AutoSize = false,
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = ThemeManager.TextSecondary,
+                Dock = DockStyle.Fill,
+                Padding = new Padding(12, 0, 12, 8)
+            };
+
+            Controls.Add(_lblMessage);
+            Controls.Add(_lblTitle);
+
+            _closeTimer = new Timer { Interval = 16 };
+            _closeTimer.Tick += CloseTimer_Tick;
+        }
+
+        private void CloseTimer_Tick(object sender, EventArgs e)
+        {
+            _progress += 0.04f;
+            if (_progress < 0.25f)
+            {
+                Opacity = _progress * 4.0; // fade in
+            }
+            else if (_progress >= 0.25f && _progress < 0.75f)
+            {
+                Opacity = 1.0;
+            }
+            else
+            {
+                Opacity = Math.Max(0.0f, (float)(1.0 - (_progress - 0.75f) * 4.0));
+            }
+
+            if (_progress >= 1.0f)
+            {
+                _closeTimer.Stop();
+                Close();
+                Dispose();
+            }
+        }
+
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            // Position at bottom-right of owner or screen
+            var owner = this.Owner ?? Application.OpenForms.Cast<Form>().FirstOrDefault(f => f.Visible);
+            Rectangle bounds = owner != null ? owner.Bounds : Screen.PrimaryScreen.WorkingArea;
+            this.Location = new Point(bounds.Right - this.Width - 16, bounds.Bottom - this.Height - 16);
+            _progress = 0f;
+            _closeTimer.Interval = 16;
+            _closeTimer.Start();
+        }
+
+        public static void Show(Form owner, string title, string message, int durationMs = 3000)
+        {
+            try
+            {
+                var toast = new ToastForm(title, message);
+                toast.Show(owner);
+                // keep visible for durationMs before starting fade out
+                var delay = new Timer { Interval = Math.Max(500, durationMs) }; // minimum to allow fade in
+                delay.Tick += (s, e) => { delay.Stop(); delay.Dispose(); toast._progress = 0.75f; /* start fade out soon */ };
+                delay.Start();
+            }
+            catch { /* swallow */ }
         }
     }
 
@@ -1284,6 +1509,95 @@ namespace DevNooTools
                 using (var pen = new Pen(_borderColor, _borderSize))
                 {
                     e.Graphics.DrawLine(pen, Width - 1, 0, Width - 1, Height);
+                }
+            }
+        }
+    }
+
+    #endregion
+
+    #region Pie Chart
+
+    public class PieChart : Control
+    {
+        private IDictionary<string, int> _data = new Dictionary<string, int>();
+        private Color[] _palette = new[] { ThemeManager.AccentBlue, ThemeManager.AccentGreen, ThemeManager.AccentOrange, ThemeManager.AccentPurple, ThemeManager.AccentRed };
+        public PieChart()
+        {
+            this.DoubleBuffered = true;
+            this.BackColor = Color.Transparent;
+        }
+
+        public void SetData(IDictionary<string, int> data)
+        {
+            _data = data ?? new Dictionary<string, int>();
+            Invalidate();
+        }
+
+        public void SetPalette(Color[] colors)
+        {
+            if (colors != null && colors.Length > 0) _palette = colors;
+            Invalidate();
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            var g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+
+            Rectangle area = new Rectangle(8, 8, Math.Min(this.Width, this.Height) - 16, Math.Min(this.Width, this.Height) - 16);
+
+            int total = _data.Values.Sum();
+            if (total <= 0)
+            {
+                using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+                using (var brush = new SolidBrush(ThemeManager.TextMuted))
+                {
+                    g.DrawString("Sem dados", this.Font, brush, area, sf);
+                }
+                return;
+            }
+
+            float startAngle = -90f;
+            int idx = 0;
+            foreach (var kv in _data)
+            {
+                float sweep = (kv.Value / (float)total) * 360f;
+                Color col = _palette[idx % _palette.Length];
+                using (var brush = new SolidBrush(col))
+                {
+                    g.FillPie(brush, area, startAngle, sweep);
+                }
+
+                startAngle += sweep;
+                idx++;
+            }
+
+            // draw legend on the right
+            int legendX = area.Right + 12;
+            int legendY = area.Top;
+            int boxSize = 12;
+            idx = 0;
+            using (var sf = new StringFormat { LineAlignment = StringAlignment.Center })
+            {
+                foreach (var kv in _data)
+                {
+                    Color col = _palette[idx % _palette.Length];
+                    using (var brush = new SolidBrush(col))
+                    using (var pen = new Pen(Color.FromArgb(160, Color.Black)))
+                    {
+                        g.FillRectangle(brush, legendX, legendY + idx * 20, boxSize, boxSize);
+                        g.DrawRectangle(pen, legendX, legendY + idx * 20, boxSize, boxSize);
+                    }
+
+                    string label = $"{kv.Key} ({kv.Value})";
+                    using (var brush = new SolidBrush(ThemeManager.TextPrimary))
+                    {
+                        g.DrawString(label, new Font(this.Font.FontFamily, 9f), brush, new PointF(legendX + boxSize + 8, legendY + idx * 20));
+                    }
+
+                    idx++;
                 }
             }
         }

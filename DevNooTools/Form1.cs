@@ -21,6 +21,14 @@ namespace DevNooTools
         // Euro culture for currency formatting
         private static readonly CultureInfo EuroCulture = new CultureInfo("de-DE");
 
+        // Animation helpers
+        private Timer _fadeInTimer;
+        private float _fadeProgress = 0f;
+
+        // Dashboard chart
+        private RoundedPanel panelChart;
+        private PieChart pieChart;
+
         public Form1()
         {
             // Start with dark theme
@@ -46,6 +54,151 @@ namespace DevNooTools
             
             // Set initial toggle state
             toggleTheme.IsOn = ThemeManager.IsDarkTheme;
+
+            // Prepare fade-in
+            this.Opacity = 0.0;
+            _fadeInTimer = new Timer { Interval = 16 };
+            _fadeInTimer.Tick += FadeInTimer_Tick;
+
+            // Wire navigation clicks for dashboard and products
+            try
+            {
+                panelNavDashboard.Click += PanelNavDashboard_Click;
+                lblNavDashboard.Click += PanelNavDashboard_Click;
+
+                panelNavProducts.Click += PanelNavProducts_Click;
+                lblNavProducts.Click += PanelNavProducts_Click;
+            }
+            catch { /* designer fields may not be initialized in some contexts */ }
+        }
+
+        private void SetupPieChart()
+        {
+            if (panelMain == null) return;
+
+            // Create container panel if not exists
+            if (panelChart == null)
+            {
+                panelChart = new RoundedPanel
+                {
+                    Radius = 8,
+                    ShowShadow = false,
+                    BorderColor = ThemeManager.BorderDefault,
+                    BackColor = ThemeManager.BgCard,
+                    Size = new Size(320, 220),
+                    Anchor = AnchorStyles.Top | AnchorStyles.Right
+                };
+
+                pieChart = new PieChart { Dock = DockStyle.Fill };
+                panelChart.Controls.Add(pieChart);
+                this.Controls.Add(panelChart);
+
+                // Position panelChart relative to panelMain
+                RepositionChart();
+
+                // Update on resize to keep position
+                panelMain.Resize += (s, e) => RepositionChart();
+                this.Resize += (s, e) => RepositionChart();
+            }
+
+            UpdatePieChart();
+        }
+
+        private void RepositionChart()
+        {
+            if (panelChart == null || panelMain == null) return;
+            // place at top-right inside panelMain with margin
+            int margin = 16;
+            int x = panelMain.Right - panelChart.Width - margin;
+            int y = panelMain.Top + panelHeader.Height + panelCards.Height + margin;
+            // Convert coordinates to form client coordinates
+            Point loc = this.PointToClient(new Point(x, y));
+            panelChart.Location = loc;
+        }
+
+        private void UpdatePieChart()
+        {
+            if (pieChart == null) return;
+
+            if (allProducts == null || allProducts.Count == 0)
+            {
+                pieChart.SetData(new Dictionary<string,int>());
+                return;
+            }
+
+            var groups = allProducts.GroupBy(p => string.IsNullOrWhiteSpace(p.Description) ? "Sem Categoria" : p.Description)
+                .Select(g => new { Category = g.Key, Quantity = g.Sum(p => p.Quantity) })
+                .OrderByDescending(g => g.Quantity)
+                .ToList();
+
+            var dict = groups.ToDictionary(g => g.Category, g => g.Quantity);
+            pieChart.SetPalette(new Color[] { ThemeManager.AccentBlue, ThemeManager.AccentGreen, ThemeManager.AccentOrange, ThemeManager.AccentPurple, ThemeManager.AccentRed });
+            pieChart.SetData(dict);
+        }
+
+        private void PanelNavDashboard_Click(object sender, EventArgs e)
+        {
+            ShowDashboard();
+        }
+
+        private void PanelNavProducts_Click(object sender, EventArgs e)
+        {
+            ShowProducts();
+        }
+
+        private void ShowDashboard()
+        {
+            // Selection visuals
+            if (panelNavDashboard != null) panelNavDashboard.IsSelected = true;
+            if (panelNavProducts != null) panelNavProducts.IsSelected = false;
+
+            panelNavDashboard?.Invalidate();
+            panelNavProducts?.Invalidate();
+
+            // Update main area: show cards, hide form and grid
+            if (panelCards != null) panelCards.Visible = true;
+            if (panelForm != null) panelForm.Visible = false;
+            if (panelGrid != null) panelGrid.Visible = false;
+
+            // Update header text
+            if (labelTitle != null) labelTitle.Text = "Dashboard";
+            if (labelSubtitle != null) labelSubtitle.Text = "Visão geral do inventário e métricas rápidas";
+
+            // ensure pie chart exists and is updated
+            SetupPieChart();
+            UpdatePieChart();
+            if (panelChart != null) panelChart.Visible = true;
+        }
+
+        private void ShowProducts()
+        {
+            if (panelNavDashboard != null) panelNavDashboard.IsSelected = false;
+            if (panelNavProducts != null) panelNavProducts.IsSelected = true;
+
+            panelNavDashboard?.Invalidate();
+            panelNavProducts?.Invalidate();
+
+            // Update main area: hide cards, show form and grid
+            if (panelCards != null) panelCards.Visible = false;
+            if (panelForm != null) panelForm.Visible = true;
+            if (panelGrid != null) panelGrid.Visible = true;
+
+            // Update header text
+            if (labelTitle != null) labelTitle.Text = "Produtos";
+            if (labelSubtitle != null) labelSubtitle.Text = "Gerencie seu inventário facilmente";
+
+            if (panelChart != null) panelChart.Visible = false;
+        }
+
+        private void FadeInTimer_Tick(object sender, EventArgs e)
+        {
+            _fadeProgress += 0.04f;
+            this.Opacity = Math.Min(1.0, _fadeProgress);
+            if (this.Opacity >= 1.0)
+            {
+                _fadeInTimer.Stop();
+                this.Opacity = 1.0;
+            }
         }
 
         private void MakeAvatarRounded()
@@ -63,6 +216,12 @@ namespace DevNooTools
         private void ToggleTheme_OnToggled(object sender, EventArgs e)
         {
             ThemeManager.ToggleTheme();
+            // update chart colors to reflect theme if needed
+            if (pieChart != null)
+            {
+                pieChart.BackColor = ThemeManager.BgCard;
+                panelChart.BackColor = ThemeManager.BgCard;
+            }
         }
 
         private void ApplyTheme()
@@ -84,25 +243,16 @@ namespace DevNooTools
             labelLogo.ForeColor = ThemeManager.TextPrimary;
             labelLogoSub.ForeColor = ThemeManager.TextMuted;
             
-            // Update nav items
+            // Update nav items (only Dashboard and Products remain)
             lblNavDashboard.ForeColor = ThemeManager.TextSecondary;
             lblNavProducts.ForeColor = ThemeManager.TextPrimary;
-            lblNavCategories.ForeColor = ThemeManager.TextSecondary;
-            lblNavReports.ForeColor = ThemeManager.TextSecondary;
-            lblNavSettings.ForeColor = ThemeManager.TextSecondary;
             
             // Update nav panels hover color
             panelNavDashboard.HoverColor = ThemeManager.BgHover;
             panelNavProducts.HoverColor = ThemeManager.BgHover;
-            panelNavCategories.HoverColor = ThemeManager.BgHover;
-            panelNavReports.HoverColor = ThemeManager.BgHover;
-            panelNavSettings.HoverColor = ThemeManager.BgHover;
             
             panelNavDashboard.Invalidate();
             panelNavProducts.Invalidate();
-            panelNavCategories.Invalidate();
-            panelNavReports.Invalidate();
-            panelNavSettings.Invalidate();
             
             // Update user area
             labelUserName.ForeColor = ThemeManager.TextPrimary;
@@ -179,6 +329,27 @@ namespace DevNooTools
                 {
                     this.Text = $"DevNooTools - Dados: {repository.DatabasePath}";
                 }
+
+                // Start fade-in animation
+                _fadeProgress = 0f;
+                this.Opacity = 0.0;
+                _fadeInTimer.Start();
+
+                // Attach hover fade effects to interactive controls
+                try
+                {
+                    HoverFader.AttachToAll(this, 0.10f);
+                }
+                catch { }
+
+                // Setup chart
+                SetupPieChart();
+
+                // ensure initial view matches selected nav
+                if (panelNavProducts != null && panelNavProducts.IsSelected)
+                    ShowProducts();
+                else
+                    ShowDashboard();
             }
             catch (Exception ex)
             {
@@ -230,7 +401,8 @@ namespace DevNooTools
         private void UpdateStats()
         {
             // Total products
-            labelCardTotalValue.Text = allProducts.Count.ToString();
+            int newTotal = allProducts.Count;
+            AnimateIntegerLabel(labelCardTotalValue, newTotal, 350);
             
             // Total value in stock (Euro)
             decimal totalValue = allProducts.Sum(p => p.Price * p.Quantity);
@@ -243,6 +415,77 @@ namespace DevNooTools
             // Categories count (unique descriptions)
             int categories = allProducts.Select(p => p.Description).Where(d => !string.IsNullOrWhiteSpace(d)).Distinct().Count();
             labelCardCategoriesValue.Text = categories.ToString();
+
+            // update chart data as well
+            UpdatePieChart();
+        }
+
+        private void AnimateIntegerLabel(Label lbl, int target, int durationMs = 300)
+        {
+            if (lbl == null) return;
+
+            int startVal = 0;
+            if (!int.TryParse(lbl.Text, out startVal)) startVal = 0;
+
+            if (startVal == target) return;
+
+            int steps = Math.Max(1, durationMs / 16);
+            int currentStep = 0;
+            Timer t = new Timer { Interval = 16 };
+            t.Tick += (s, e) =>
+            {
+                currentStep++;
+                float progress = (float)currentStep / steps;
+                int val = startVal + (int)((target - startVal) * progress);
+                lbl.Text = val.ToString();
+                if (currentStep >= steps)
+                {
+                    lbl.Text = target.ToString();
+                    t.Stop();
+                    t.Dispose();
+                }
+            };
+            t.Start();
+        }
+
+        private void AnimatePanelPulse(Control ctrl)
+        {
+            if (ctrl == null) return;
+            Color original = ctrl.BackColor;
+            float progress = 0f;
+            Timer t = new Timer { Interval = 16 };
+            t.Tick += (s, e) =>
+            {
+                progress += 0.06f;
+                if (progress >= 1f) progress = 1f;
+
+                float intensity = (float)(Math.Sin(progress * Math.PI));
+                ctrl.BackColor = RoundedHelper.LightenColor(original, 0.12f * intensity);
+
+                if (progress >= 1f)
+                {
+                    // reverse animation
+                    Timer rev = new Timer { Interval = 16 };
+                    float revP = 0f;
+                    rev.Tick += (s2, e2) =>
+                    {
+                        revP += 0.08f;
+                        float rint = (float)(Math.Cos(revP * Math.PI / 2));
+                        ctrl.BackColor = RoundedHelper.LightenColor(original, 0.12f * rint);
+                        if (revP >= 1f)
+                        {
+                            ctrl.BackColor = original;
+                            rev.Stop();
+                            rev.Dispose();
+                        }
+                    };
+                    rev.Start();
+
+                    t.Stop();
+                    t.Dispose();
+                }
+            };
+            t.Start();
         }
 
         private void btnAdd_Click(object sender, EventArgs e)
@@ -294,6 +537,9 @@ namespace DevNooTools
                 dataGridViewProducts.FirstDisplayedScrollingRowIndex = lastRowIndex;
             }
 
+            // Pulse the grid area for feedback
+            AnimatePanelPulse(panelGrid);
+
             ShowMessage("Produto adicionado com sucesso!", "Sucesso", MessageBoxIcon.Information);
         }
 
@@ -337,6 +583,10 @@ namespace DevNooTools
             bindingSourceProducts.ResetBindings(false);
             SaveProducts();
             UpdateStats();
+
+            // subtle pulse on form area
+            AnimatePanelPulse(panelForm);
+
             ShowMessage("Produto atualizado com sucesso!", "Sucesso", MessageBoxIcon.Information);
         }
 
@@ -363,6 +613,7 @@ namespace DevNooTools
                 SaveProducts();
                 UpdateStats();
                 ClearFields();
+                AnimatePanelPulse(panelGrid);
                 ShowMessage("Produto excluído com sucesso!", "Sucesso", MessageBoxIcon.Information);
             }
         }
@@ -410,7 +661,16 @@ namespace DevNooTools
 
         private void ShowMessage(string message, string title, MessageBoxIcon icon)
         {
-            MessageBox.Show(message, title, MessageBoxButtons.OK, icon);
+            // Use a non-blocking toast notification for smoother UX
+            try
+            {
+                ToastForm.Show(this, title, message, 3000);
+            }
+            catch
+            {
+                // Fallback to classic dialog if toast fails
+                MessageBox.Show(message, title, MessageBoxButtons.OK, icon);
+            }
         }
 
         private decimal ParseDecimal(string text)
