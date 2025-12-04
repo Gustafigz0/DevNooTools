@@ -315,6 +315,34 @@ namespace DevNooTools
                 // Configure DataGridView style
                 ConfigureDataGridView();
 
+                // Test connection to Supabase first (diagnostic)
+                #if DEBUG
+                try
+                {
+                    var testDb = new DatabaseHelper(
+                        Properties.Settings.Default.SupabaseUrl,
+                        Properties.Settings.Default.SupabaseAnonKey);
+                    var result = testDb.TestConnection();
+                    
+                    if (!result.Success)
+                    {
+                        MessageBox.Show(
+                            $"Aviso: Conexão com Supabase falhou.\n\n{result.Message}\n\nVerifique URL, chave e tabela 'products'.",
+                            "Diagnóstico de Conexão",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                    }
+                }
+                catch (Exception testEx)
+                {
+                    MessageBox.Show(
+                        $"Erro ao testar conexão Supabase:\n{testEx.Message}",
+                        "Diagnóstico",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                }
+                #endif
+
                 repository = new ProductRepository();
                 allProducts = repository.LoadAll();
                 products = new BindingList<Product>(allProducts.ToList());
@@ -353,7 +381,7 @@ namespace DevNooTools
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Erro ao carregar produtos: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Erro ao carregar produtos: {ex.Message}\n\nStack: {ex.StackTrace}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 allProducts = new List<Product>();
                 products = new BindingList<Product>();
                 bindingSourceProducts.DataSource = products;

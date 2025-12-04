@@ -19,7 +19,21 @@ namespace DevNooTools
             
             if (useJson)
             {
-                dbHelper = new DatabaseHelper();
+                // Use Settings to get Supabase credentials
+                string url = null;
+                string key = null;
+                
+                try
+                {
+                    url = Properties.Settings.Default.SupabaseUrl;
+                    key = Properties.Settings.Default.SupabaseAnonKey;
+                }
+                catch
+                {
+                    // Settings not available, will use defaults from DatabaseHelper
+                }
+                
+                dbHelper = new DatabaseHelper(url, key);
                 MigrateFromXmlIfNeeded();
             }
         }
