@@ -10,58 +10,24 @@ namespace DevNooTools
         private readonly string xmlFilePath;
         private readonly XmlSerializer serializer = new XmlSerializer(typeof(List<Product>));
         private readonly DatabaseHelper dbHelper;
-        private readonly bool useJson;
 
-        public ProductRepository(bool useJson = true, string xmlFilePath = null)
+        public ProductRepository(string jsonFilePath = null)
         {
-            this.useJson = useJson;
-            this.xmlFilePath = xmlFilePath ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "products.xml");
-            
-            if (useJson)
-            {
-                // Use Settings to get Supabase credentials
-                string url = null;
-                string key = null;
-                
-                try
-                {
-                    url = Properties.Settings.Default.SupabaseUrl;
-                    key = Properties.Settings.Default.SupabaseAnonKey;
-                }
-                catch
-                {
-                    // Settings not available, will use defaults from DatabaseHelper
-                }
-                
-                dbHelper = new DatabaseHelper(url, key);
-                MigrateFromXmlIfNeeded();
-            }
+            this.xmlFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "products.xml");
+            dbHelper = new DatabaseHelper(jsonFilePath);
+            MigrateFromXmlIfNeeded();
         }
 
-        public string DatabasePath => useJson && dbHelper != null ? dbHelper.DatabasePath : null;
+        public string DatabasePath => dbHelper?.DatabasePath;
 
         public List<Product> LoadAll()
         {
-            if (useJson)
-            {
-                return dbHelper.LoadProducts();
-            }
-            else
-            {
-                return LoadFromXml();
-            }
+            return dbHelper.LoadProducts();
         }
 
         public void SaveAll(List<Product> products)
         {
-            if (useJson)
-            {
-                dbHelper.SaveProducts(products);
-            }
-            else
-            {
-                SaveToXml(products);
-            }
+            dbHelper.SaveProducts(products);
         }
 
         private void MigrateFromXmlIfNeeded()
@@ -109,18 +75,6 @@ namespace DevNooTools
             catch
             {
                 return new List<Product>();
-            }
-        }
-
-        private void SaveToXml(List<Product> products)
-        {
-            var dir = Path.GetDirectoryName(xmlFilePath);
-            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
-
-            using (var fs = File.Create(xmlFilePath))
-            {
-                serializer.Serialize(fs, products);
             }
         }
 

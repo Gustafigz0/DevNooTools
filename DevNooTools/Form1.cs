@@ -27,6 +27,8 @@ namespace DevNooTools
 
         // Dashboard chart
         private RoundedPanel panelChart;
+        private BarChart barChart;
+        private RoundedPanel panelPieChart;
         private PieChart pieChart;
 
         public Form1()
@@ -76,44 +78,129 @@ namespace DevNooTools
         {
             if (panelMain == null) return;
 
-            // Create container panel if not exists
+            // Create Bar Chart container panel if not exists
             if (panelChart == null)
             {
                 panelChart = new RoundedPanel
                 {
-                    Radius = 8,
-                    ShowShadow = false,
+                    Radius = 12,
+                    ShowShadow = true,
+                    ShadowDepth = 4,
                     BorderColor = ThemeManager.BorderDefault,
                     BackColor = ThemeManager.BgCard,
-                    Size = new Size(320, 220),
+                    Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                };
+
+                barChart = new BarChart 
+                { 
+                    Dock = DockStyle.Fill,
+                    BackColor = ThemeManager.BgCard,
+                    Title = "?? Preços dos Produtos (Top 8)"
+                };
+                panelChart.Controls.Add(barChart);
+                panelMain.Controls.Add(panelChart);
+            }
+
+            // Create Pie Chart container panel if not exists
+            if (panelPieChart == null)
+            {
+                panelPieChart = new RoundedPanel
+                {
+                    Radius = 12,
+                    ShowShadow = true,
+                    ShadowDepth = 4,
+                    BorderColor = ThemeManager.BorderDefault,
+                    BackColor = ThemeManager.BgCard,
                     Anchor = AnchorStyles.Top | AnchorStyles.Right
                 };
 
-                pieChart = new PieChart { Dock = DockStyle.Fill };
-                panelChart.Controls.Add(pieChart);
-                this.Controls.Add(panelChart);
-
-                // Position panelChart relative to panelMain
-                RepositionChart();
-
-                // Update on resize to keep position
-                panelMain.Resize += (s, e) => RepositionChart();
-                this.Resize += (s, e) => RepositionChart();
+                pieChart = new PieChart 
+                { 
+                    Dock = DockStyle.Fill,
+                    BackColor = ThemeManager.BgCard
+                };
+                panelPieChart.Controls.Add(pieChart);
+                panelMain.Controls.Add(panelPieChart);
             }
 
-            UpdatePieChart();
+            // Position charts
+            RepositionChart();
+
+            // Update on resize to keep position
+            panelMain.Resize -= PanelMain_Resize;
+            panelMain.Resize += PanelMain_Resize;
+
+            UpdateCharts();
+        }
+
+        private void PanelMain_Resize(object sender, EventArgs e)
+        {
+            RepositionChart();
         }
 
         private void RepositionChart()
         {
-            if (panelChart == null || panelMain == null) return;
-            // place at top-right inside panelMain with margin
-            int margin = 16;
-            int x = panelMain.Right - panelChart.Width - margin;
-            int y = panelMain.Top + panelHeader.Height + panelCards.Height + margin;
-            // Convert coordinates to form client coordinates
-            Point loc = this.PointToClient(new Point(x, y));
-            panelChart.Location = loc;
+            if (panelMain == null) return;
+
+            int margin = 24;
+            int topOffset = panelHeader.Height + panelCards.Height + margin;
+            int availableWidth = panelMain.Width - margin * 3;
+            int availableHeight = panelMain.Height - topOffset - margin;
+
+            // Bar chart takes 60% of width, Pie chart takes 35%
+            int barChartWidth = (int)(availableWidth * 0.62);
+            int pieChartWidth = (int)(availableWidth * 0.35);
+            int chartHeight = Math.Max(280, availableHeight);
+
+            if (panelChart != null)
+            {
+                panelChart.Location = new Point(margin, topOffset);
+                panelChart.Size = new Size(barChartWidth, chartHeight);
+                panelChart.BringToFront();
+            }
+
+            if (panelPieChart != null)
+            {
+                panelPieChart.Location = new Point(margin + barChartWidth + margin, topOffset);
+                panelPieChart.Size = new Size(pieChartWidth, chartHeight);
+                panelPieChart.BringToFront();
+            }
+        }
+
+        private void UpdateCharts()
+        {
+            UpdateBarChart();
+            UpdatePieChart();
+        }
+
+        private void UpdateBarChart()
+        {
+            if (barChart == null) return;
+
+            if (allProducts == null || allProducts.Count == 0)
+            {
+                barChart.SetData(new List<BarChartItem>());
+                return;
+            }
+
+            // Get top 8 products by price
+            var topProducts = allProducts
+                .OrderByDescending(p => p.Price)
+                .Take(8)
+                .Select(p => new BarChartItem(p.Name ?? "Sem nome", p.Price))
+                .ToList();
+
+            barChart.SetPalette(new Color[] { 
+                ThemeManager.AccentBlue, 
+                ThemeManager.AccentGreen, 
+                ThemeManager.AccentOrange, 
+                ThemeManager.AccentPurple, 
+                ThemeManager.AccentRed,
+                Color.FromArgb(255, 99, 132),
+                Color.FromArgb(54, 162, 235),
+                Color.FromArgb(255, 206, 86)
+            });
+            barChart.SetData(topProducts);
         }
 
         private void UpdatePieChart()
@@ -129,6 +216,7 @@ namespace DevNooTools
             var groups = allProducts.GroupBy(p => string.IsNullOrWhiteSpace(p.Description) ? "Sem Categoria" : p.Description)
                 .Select(g => new { Category = g.Key, Quantity = g.Sum(p => p.Quantity) })
                 .OrderByDescending(g => g.Quantity)
+                .Take(5)
                 .ToList();
 
             var dict = groups.ToDictionary(g => g.Category, g => g.Quantity);
@@ -164,10 +252,12 @@ namespace DevNooTools
             if (labelTitle != null) labelTitle.Text = "Dashboard";
             if (labelSubtitle != null) labelSubtitle.Text = "Visão geral do inventário e métricas rápidas";
 
-            // ensure pie chart exists and is updated
+            // Ensure charts exist and are updated
             SetupPieChart();
-            UpdatePieChart();
+            UpdateCharts();
+            
             if (panelChart != null) panelChart.Visible = true;
+            if (panelPieChart != null) panelPieChart.Visible = true;
         }
 
         private void ShowProducts()
@@ -188,6 +278,7 @@ namespace DevNooTools
             if (labelSubtitle != null) labelSubtitle.Text = "Gerencie seu inventário facilmente";
 
             if (panelChart != null) panelChart.Visible = false;
+            if (panelPieChart != null) panelPieChart.Visible = false;
         }
 
         private void FadeInTimer_Tick(object sender, EventArgs e)
@@ -216,11 +307,24 @@ namespace DevNooTools
         private void ToggleTheme_OnToggled(object sender, EventArgs e)
         {
             ThemeManager.ToggleTheme();
-            // update chart colors to reflect theme if needed
+            // Update chart colors to reflect theme
+            if (barChart != null)
+            {
+                barChart.BackColor = ThemeManager.BgCard;
+            }
+            if (panelChart != null)
+            {
+                panelChart.BackColor = ThemeManager.BgCard;
+                panelChart.BorderColor = ThemeManager.BorderDefault;
+            }
             if (pieChart != null)
             {
                 pieChart.BackColor = ThemeManager.BgCard;
-                panelChart.BackColor = ThemeManager.BgCard;
+            }
+            if (panelPieChart != null)
+            {
+                panelPieChart.BackColor = ThemeManager.BgCard;
+                panelPieChart.BorderColor = ThemeManager.BorderDefault;
             }
         }
 
@@ -315,34 +419,6 @@ namespace DevNooTools
                 // Configure DataGridView style
                 ConfigureDataGridView();
 
-                // Test connection to Supabase first (diagnostic)
-                #if DEBUG
-                try
-                {
-                    var testDb = new DatabaseHelper(
-                        Properties.Settings.Default.SupabaseUrl,
-                        Properties.Settings.Default.SupabaseAnonKey);
-                    var result = testDb.TestConnection();
-                    
-                    if (!result.Success)
-                    {
-                        MessageBox.Show(
-                            $"Aviso: Conexão com Supabase falhou.\n\n{result.Message}\n\nVerifique URL, chave e tabela 'products'.",
-                            "Diagnóstico de Conexão",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning);
-                    }
-                }
-                catch (Exception testEx)
-                {
-                    MessageBox.Show(
-                        $"Erro ao testar conexão Supabase:\n{testEx.Message}",
-                        "Diagnóstico",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                }
-                #endif
-
                 repository = new ProductRepository();
                 allProducts = repository.LoadAll();
                 products = new BindingList<Product>(allProducts.ToList());
@@ -370,14 +446,16 @@ namespace DevNooTools
                 }
                 catch { }
 
-                // Setup chart
+                // Always start on Dashboard - hide product panels first
+                panelForm.Visible = false;
+                panelGrid.Visible = false;
+                panelCards.Visible = true;
+                
+                // Setup chart after panels are configured
                 SetupPieChart();
 
-                // ensure initial view matches selected nav
-                if (panelNavProducts != null && panelNavProducts.IsSelected)
-                    ShowProducts();
-                else
-                    ShowDashboard();
+                // Now apply full dashboard state
+                ShowDashboard();
             }
             catch (Exception ex)
             {
@@ -444,8 +522,8 @@ namespace DevNooTools
             int categories = allProducts.Select(p => p.Description).Where(d => !string.IsNullOrWhiteSpace(d)).Distinct().Count();
             labelCardCategoriesValue.Text = categories.ToString();
 
-            // update chart data as well
-            UpdatePieChart();
+            // Update charts data as well
+            UpdateCharts();
         }
 
         private void AnimateIntegerLabel(Label lbl, int target, int durationMs = 300)

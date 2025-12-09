@@ -1516,16 +1516,331 @@ namespace DevNooTools
 
     #endregion
 
+    #region Bar Chart (Modern)
+
+    public class BarChart : Control
+    {
+        private List<BarChartItem> _data = new List<BarChartItem>();
+        private Color[] _palette = new[] { ThemeManager.AccentBlue, ThemeManager.AccentGreen, ThemeManager.AccentOrange, ThemeManager.AccentPurple, ThemeManager.AccentRed };
+        private string _title = "Preços dos Produtos";
+        private int _hoveredIndex = -1;
+        private float[] _animationProgress;
+        private Timer _animationTimer;
+
+        public string Title { get => _title; set { _title = value; Invalidate(); } }
+
+        public BarChart()
+        {
+            this.DoubleBuffered = true;
+            this.SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+                         ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+            this.BackColor = ThemeManager.BgCard;
+            this.Font = new Font("Segoe UI", 9F);
+
+            _animationTimer = new Timer { Interval = 16 };
+            _animationTimer.Tick += AnimationTimer_Tick;
+        }
+
+        private void AnimationTimer_Tick(object sender, EventArgs e)
+        {
+            bool allComplete = true;
+            for (int i = 0; i < _animationProgress.Length; i++)
+            {
+                if (_animationProgress[i] < 1f)
+                {
+                    _animationProgress[i] += 0.08f;
+                    if (_animationProgress[i] > 1f) _animationProgress[i] = 1f;
+                    allComplete = false;
+                }
+            }
+            Invalidate();
+            if (allComplete) _animationTimer.Stop();
+        }
+
+        public void SetData(List<BarChartItem> data)
+        {
+            _data = data ?? new List<BarChartItem>();
+            _animationProgress = new float[_data.Count];
+            for (int i = 0; i < _animationProgress.Length; i++)
+                _animationProgress[i] = 0f;
+            _animationTimer.Start();
+            Invalidate();
+        }
+
+        public void SetPalette(Color[] colors)
+        {
+            if (colors != null && colors.Length > 0) _palette = colors;
+            Invalidate();
+        }
+
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            base.OnMouseMove(e);
+            int newHovered = GetBarIndexAtPoint(e.Location);
+            if (newHovered != _hoveredIndex)
+            {
+                _hoveredIndex = newHovered;
+                Invalidate();
+            }
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            _hoveredIndex = -1;
+            Invalidate();
+        }
+
+        private int GetBarIndexAtPoint(Point pt)
+        {
+            if (_data.Count == 0) return -1;
+
+            int titleHeight = 40;
+            int legendHeight = 30;
+            int padding = 20;
+            int chartLeft = padding + 60;
+            int chartRight = Width - padding;
+            int chartTop = titleHeight + padding;
+            int chartBottom = Height - legendHeight - padding;
+            int chartHeight = chartBottom - chartTop;
+
+            if (_data.Count == 0 || chartHeight <= 0) return -1;
+
+            int barWidth = Math.Max(20, (chartRight - chartLeft) / _data.Count - 10);
+            int spacing = (chartRight - chartLeft - barWidth * _data.Count) / (_data.Count + 1);
+
+            for (int i = 0; i < _data.Count; i++)
+            {
+                int x = chartLeft + spacing + i * (barWidth + spacing);
+                if (pt.X >= x && pt.X <= x + barWidth && pt.Y >= chartTop && pt.Y <= chartBottom)
+                    return i;
+            }
+            return -1;
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            var g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+
+            // Background
+            using (var brush = new SolidBrush(BackColor))
+            {
+                g.FillRectangle(brush, ClientRectangle);
+            }
+
+            int titleHeight = 40;
+            int legendHeight = 30;
+            int padding = 20;
+            int chartLeft = padding + 50;
+            int chartRight = Width - padding;
+            int chartTop = titleHeight + padding;
+            int chartBottom = Height - legendHeight - padding;
+            int chartHeight = chartBottom - chartTop;
+            int chartWidth = chartRight - chartLeft;
+
+            // Draw title
+            using (var titleFont = new Font("Segoe UI", 12F, FontStyle.Bold))
+            using (var titleBrush = new SolidBrush(ThemeManager.TextPrimary))
+            {
+                g.DrawString(_title, titleFont, titleBrush, padding, 12);
+            }
+
+            if (_data.Count == 0 || chartHeight <= 0 || chartWidth <= 0)
+            {
+                using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+                using (var brush = new SolidBrush(ThemeManager.TextMuted))
+                {
+                    g.DrawString("Adicione produtos para ver o gráfico", this.Font, brush, 
+                        new Rectangle(0, chartTop, Width, chartHeight), sf);
+                }
+                return;
+            }
+
+            // Calculate max value
+            decimal maxValue = _data.Max(d => d.Value);
+            if (maxValue <= 0) maxValue = 1;
+
+            // Draw grid lines
+            int gridLines = 5;
+            using (var gridPen = new Pen(Color.FromArgb(40, ThemeManager.TextMuted), 1))
+            using (var labelBrush = new SolidBrush(ThemeManager.TextMuted))
+            using (var labelFont = new Font("Segoe UI", 8F))
+            {
+                gridPen.DashStyle = DashStyle.Dot;
+                for (int i = 0; i <= gridLines; i++)
+                {
+                    int y = chartBottom - (int)(chartHeight * i / (float)gridLines);
+                    g.DrawLine(gridPen, chartLeft, y, chartRight, y);
+
+                    decimal labelValue = maxValue * i / gridLines;
+                    string labelText = labelValue.ToString("N0") + " €";
+                    var labelSize = g.MeasureString(labelText, labelFont);
+                    g.DrawString(labelText, labelFont, labelBrush, chartLeft - labelSize.Width - 5, y - labelSize.Height / 2);
+                }
+            }
+
+            // Draw bars
+            int barWidth = Math.Max(20, Math.Min(60, (chartWidth / _data.Count) - 15));
+            int totalBarsWidth = barWidth * _data.Count;
+            int totalSpacing = chartWidth - totalBarsWidth;
+            int spacing = totalSpacing / (_data.Count + 1);
+
+            for (int i = 0; i < _data.Count; i++)
+            {
+                var item = _data[i];
+                float progress = _animationProgress != null && i < _animationProgress.Length ? _animationProgress[i] : 1f;
+                int barHeight = (int)(chartHeight * (float)(item.Value / maxValue) * progress);
+                int x = chartLeft + spacing + i * (barWidth + spacing);
+                int y = chartBottom - barHeight;
+
+                Color barColor = _palette[i % _palette.Length];
+                bool isHovered = i == _hoveredIndex;
+
+                if (isHovered)
+                {
+                    barColor = RoundedHelper.LightenColor(barColor, 0.2f);
+                }
+
+                // Draw bar with rounded top
+                if (barHeight > 0)
+                {
+                    using (var path = CreateRoundedTopRect(x, y, barWidth, barHeight, 6))
+                    {
+                        // Gradient fill
+                        using (var brush = new LinearGradientBrush(
+                            new Rectangle(x, y, barWidth, barHeight + 1),
+                            barColor,
+                            RoundedHelper.DarkenColor(barColor, 0.2f),
+                            LinearGradientMode.Vertical))
+                        {
+                            g.FillPath(brush, path);
+                        }
+
+                        // Glow effect on hover
+                        if (isHovered)
+                        {
+                            using (var glowBrush = new SolidBrush(Color.FromArgb(30, barColor)))
+                            {
+                                var glowRect = new Rectangle(x - 4, y - 4, barWidth + 8, barHeight + 8);
+                                using (var glowPath = CreateRoundedTopRect(glowRect.X, glowRect.Y, glowRect.Width, glowRect.Height, 8))
+                                {
+                                    g.FillPath(glowBrush, glowPath);
+                                }
+                            }
+                        }
+                    }
+
+                    // Draw value on top of bar
+                    if (progress >= 0.9f)
+                    {
+                        string valueText = item.Value.ToString("N2") + " €";
+                        using (var valueFont = new Font("Segoe UI", 8F, FontStyle.Bold))
+                        using (var valueBrush = new SolidBrush(ThemeManager.TextPrimary))
+                        {
+                            var valueSize = g.MeasureString(valueText, valueFont);
+                            float valueX = x + (barWidth - valueSize.Width) / 2;
+                            float valueY = y - valueSize.Height - 4;
+                            if (valueY < chartTop) valueY = y + 4;
+                            g.DrawString(valueText, valueFont, valueBrush, valueX, valueY);
+                        }
+                    }
+                }
+
+                // Draw label below bar
+                string label = item.Label.Length > 10 ? item.Label.Substring(0, 10) + "..." : item.Label;
+                using (var labelFont = new Font("Segoe UI", 8F))
+                using (var labelBrush = new SolidBrush(isHovered ? ThemeManager.TextPrimary : ThemeManager.TextSecondary))
+                {
+                    var labelSize = g.MeasureString(label, labelFont);
+                    float labelX = x + (barWidth - labelSize.Width) / 2;
+                    g.DrawString(label, labelFont, labelBrush, labelX, chartBottom + 8);
+                }
+            }
+
+            // Draw tooltip on hover
+            if (_hoveredIndex >= 0 && _hoveredIndex < _data.Count)
+            {
+                var item = _data[_hoveredIndex];
+                string tooltip = $"{item.Label}\nPreço: {item.Value:N2} €";
+                using (var tooltipFont = new Font("Segoe UI", 9F))
+                {
+                    var tooltipSize = g.MeasureString(tooltip, tooltipFont);
+                    int tooltipX = Math.Min(Width - (int)tooltipSize.Width - 20, 
+                        chartLeft + spacing + _hoveredIndex * (barWidth + spacing));
+                    int tooltipY = chartTop + 10;
+
+                    var tooltipRect = new Rectangle(tooltipX - 8, tooltipY - 4, 
+                        (int)tooltipSize.Width + 16, (int)tooltipSize.Height + 8);
+
+                    using (var tooltipPath = RoundedHelper.CreateRoundedRectangle(tooltipRect, 6))
+                    using (var tooltipBrush = new SolidBrush(Color.FromArgb(230, ThemeManager.BgPrimary)))
+                    using (var tooltipPen = new Pen(ThemeManager.BorderDefault))
+                    using (var textBrush = new SolidBrush(ThemeManager.TextPrimary))
+                    {
+                        g.FillPath(tooltipBrush, tooltipPath);
+                        g.DrawPath(tooltipPen, tooltipPath);
+                        g.DrawString(tooltip, tooltipFont, textBrush, tooltipX, tooltipY);
+                    }
+                }
+            }
+        }
+
+        private GraphicsPath CreateRoundedTopRect(int x, int y, int width, int height, int radius)
+        {
+            var path = new GraphicsPath();
+            if (height < radius * 2)
+            {
+                path.AddRectangle(new Rectangle(x, y, width, height));
+                return path;
+            }
+
+            path.AddArc(x, y, radius * 2, radius * 2, 180, 90);
+            path.AddArc(x + width - radius * 2, y, radius * 2, radius * 2, 270, 90);
+            path.AddLine(x + width, y + radius, x + width, y + height);
+            path.AddLine(x + width, y + height, x, y + height);
+            path.AddLine(x, y + height, x, y + radius);
+            path.CloseFigure();
+            return path;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) _animationTimer?.Dispose();
+            base.Dispose(disposing);
+        }
+    }
+
+    public class BarChartItem
+    {
+        public string Label { get; set; }
+        public decimal Value { get; set; }
+
+        public BarChartItem(string label, decimal value)
+        {
+            Label = label;
+            Value = value;
+        }
+    }
+
+    #endregion
+
     #region Pie Chart
 
     public class PieChart : Control
     {
         private IDictionary<string, int> _data = new Dictionary<string, int>();
         private Color[] _palette = new[] { ThemeManager.AccentBlue, ThemeManager.AccentGreen, ThemeManager.AccentOrange, ThemeManager.AccentPurple, ThemeManager.AccentRed };
+        
         public PieChart()
         {
             this.DoubleBuffered = true;
-            this.BackColor = Color.Transparent;
+            this.SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+                         ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+            // Use theme background instead of transparent
+            this.BackColor = ThemeManager.BgCard;
         }
 
         public void SetData(IDictionary<string, int> data)

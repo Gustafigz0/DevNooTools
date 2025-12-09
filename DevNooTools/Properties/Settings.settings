@@ -4,11 +4,5 @@
     <Profile Name="(Default)" />
   </Profiles>
   <Settings>
-    <Setting Name="SupabaseUrl" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">https://pnvalhgbvzccqtuncgqb.supabase.co</Value>
-    </Setting>
-    <Setting Name="SupabaseAnonKey" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBudmFsaGdidnpjY3F0dW5jZ3FiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4NDQyMDIsImV4cCI6MjA4MDQyMDIwMn0.HjAs1cnvOf-ojlabNjv7Sxfmngn77BoMYNCxsH8VIx4</Value>
-    </Setting>
   </Settings>
 </SettingsFile>

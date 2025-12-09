@@ -275,7 +275,7 @@
             this.panelNavProducts.Controls.Add(this.lblNavProducts);
             this.panelNavProducts.Cursor = System.Windows.Forms.Cursors.Hand;
             this.panelNavProducts.HoverColor = System.Drawing.Color.FromArgb(((int)(((byte)(48)))), ((int)(((byte)(54)))), ((int)(((byte)(61)))));
-            this.panelNavProducts.IsSelected = true;
+            this.panelNavProducts.IsSelected = false;
             this.panelNavProducts.Location = new System.Drawing.Point(12, 146);
             this.panelNavProducts.Name = "panelNavProducts";
             this.panelNavProducts.Radius = 8;
@@ -301,7 +301,7 @@
             this.panelNavDashboard.Controls.Add(this.lblNavDashboard);
             this.panelNavDashboard.Cursor = System.Windows.Forms.Cursors.Hand;
             this.panelNavDashboard.HoverColor = System.Drawing.Color.FromArgb(((int)(((byte)(48)))), ((int)(((byte)(54)))), ((int)(((byte)(61)))));
-            this.panelNavDashboard.IsSelected = false;
+            this.panelNavDashboard.IsSelected = true;
             this.panelNavDashboard.Location = new System.Drawing.Point(12, 100);
             this.panelNavDashboard.Name = "panelNavDashboard";
             this.panelNavDashboard.Radius = 8;
