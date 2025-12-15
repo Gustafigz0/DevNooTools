@@ -25,7 +25,9 @@ namespace DevNooTools
                     return new List<Product>();
 
                 var json = File.ReadAllText(jsonFilePath, Encoding.UTF8);
-                return ParseProductsFromJson(json);
+                var products = ParseProductsFromJson(json);
+                EnsureSequentialIds(products);
+                return products;
             }
             catch
             {
@@ -41,6 +43,7 @@ namespace DevNooTools
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
 
+                EnsureSequentialIds(products);
                 var json = SerializeProductsToJson(products);
                 File.WriteAllText(jsonFilePath, json, Encoding.UTF8);
             }
@@ -66,7 +69,7 @@ namespace DevNooTools
                 if (!first) sb.AppendLine(",");
                 first = false;
                 sb.AppendLine("  {");
-                sb.AppendFormat("    \"id\": \"{0}\",\n", p.Id.ToString());
+                sb.AppendFormat("    \"id\": {0},\n", p.Id);
                 sb.AppendFormat("    \"name\": \"{0}\",\n", EscapeJsonString(p.Name));
                 sb.AppendFormat("    \"description\": \"{0}\",\n", EscapeJsonString(p.Description));
                 sb.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "    \"price\": {0},\n", p.Price);
@@ -87,7 +90,7 @@ namespace DevNooTools
             foreach (Match m in objMatches)
             {
                 var obj = m.Value;
-                var id = MatchStringField(obj, "id");
+                var idValue = ParseIdField(obj);
                 var name = MatchStringField(obj, "name");
                 var desc = MatchStringField(obj, "description");
                 var priceStr = MatchNumberField(obj, "price");
@@ -99,7 +102,7 @@ namespace DevNooTools
 
                 var prod = new Product
                 {
-                    Id = string.IsNullOrWhiteSpace(id) ? Guid.NewGuid() : Guid.TryParse(id, out var gid) ? gid : Guid.NewGuid(),
+                    Id = idValue,
                     Name = name,
                     Description = desc,
                     Price = price,
@@ -111,6 +114,47 @@ namespace DevNooTools
             return list;
         }
 
+        private int ParseIdField(string obj)
+        {
+            var numericId = MatchNumberField(obj, "id");
+            if (!string.IsNullOrWhiteSpace(numericId) && int.TryParse(numericId, out var parsedNumeric) && parsedNumeric > 0)
+            {
+                return parsedNumeric;
+            }
+
+            var stringId = MatchStringField(obj, "id");
+            if (int.TryParse(stringId, out var parsedString) && parsedString > 0)
+            {
+                return parsedString;
+            }
+
+            // Legacy GUIDs or missing values result in zero, repaired later.
+            return 0;
+        }
+
+        private void EnsureSequentialIds(List<Product> products)
+        {
+            if (products == null) return;
+
+            var used = new HashSet<int>();
+            int nextId = 1;
+            foreach (var product in products)
+            {
+                if (product.Id <= 0 || used.Contains(product.Id))
+                {
+                    while (used.Contains(nextId))
+                        nextId++;
+                    product.Id = nextId;
+                }
+
+                used.Add(product.Id);
+                if (product.Id >= nextId)
+                {
+                    nextId = product.Id + 1;
+                }
+            }
+        }
+
         private string MatchStringField(string obj, string field)
         {
             var pat = "\"" + field + "\"\\s*:\\s*\"([^\"]*)\"";
@@ -120,9 +164,9 @@ namespace DevNooTools
 
         private string MatchNumberField(string obj, string field)
         {
-            var pat = "\"" + field + "\"\\s*:\\s*([0-9+\\-eE\\.]+)";
+            string pat = string.Format("\"{0}\"\\s*:\\s*([-0-9eE\\.]+)", field);
             var m = Regex.Match(obj, pat);
-            return m.Success ? m.Groups[1].Value : "0";
+            return m.Success ? m.Groups[1].Value : string.Empty;
         }
 
         private string UnescapeJsonString(string s)

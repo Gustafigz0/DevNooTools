@@ -22,6 +22,7 @@
         private System.Windows.Forms.Label labelThemeIcon;
         private System.Windows.Forms.Label labelThemeText;
         private ToggleSwitch toggleTheme;
+        private DevNooTools.RoundedButton btnLogout;
 
         // Main
         private System.Windows.Forms.Panel panelMain;
@@ -89,6 +90,7 @@
             this.toggleTheme = new DevNooTools.ToggleSwitch();
             this.labelThemeText = new System.Windows.Forms.Label();
             this.labelThemeIcon = new System.Windows.Forms.Label();
+            this.btnLogout = new DevNooTools.RoundedButton();
             this.labelUserRole = new System.Windows.Forms.Label();
             this.labelUserName = new System.Windows.Forms.Label();
             this.panelUserAvatar = new System.Windows.Forms.Panel();
@@ -181,14 +183,15 @@
             // 
             this.panelUserArea.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.panelUserArea.BackColor = System.Drawing.Color.Transparent;
+            this.panelUserArea.Controls.Add(this.btnLogout);
             this.panelUserArea.Controls.Add(this.panelThemeRow);
             this.panelUserArea.Controls.Add(this.labelUserRole);
             this.panelUserArea.Controls.Add(this.labelUserName);
             this.panelUserArea.Controls.Add(this.panelUserAvatar);
-            this.panelUserArea.Location = new System.Drawing.Point(12, 590);
+            this.panelUserArea.Location = new System.Drawing.Point(12, 518);
             this.panelUserArea.Name = "panelUserArea";
             this.panelUserArea.Radius = 12;
-            this.panelUserArea.Size = new System.Drawing.Size(216, 118);
+            this.panelUserArea.Size = new System.Drawing.Size(216, 190);
             this.panelUserArea.TabIndex = 7;
             // 
             // panelThemeRow
@@ -221,9 +224,9 @@
             this.labelThemeText.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(139)))), ((int)(((byte)(148)))), ((int)(((byte)(158)))));
             this.labelThemeText.Location = new System.Drawing.Point(30, 11);
             this.labelThemeText.Name = "labelThemeText";
-            this.labelThemeText.Size = new System.Drawing.Size(67, 15);
+            this.labelThemeText.Size = new System.Drawing.Size(78, 15);
             this.labelThemeText.TabIndex = 1;
-            this.labelThemeText.Text = "Tema Claro";
+            this.labelThemeText.Text = "Tema Escuro";
             // 
             // labelThemeIcon
             // 
@@ -233,9 +236,30 @@
             this.labelThemeIcon.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(139)))), ((int)(((byte)(148)))), ((int)(((byte)(158)))));
             this.labelThemeIcon.Location = new System.Drawing.Point(4, 8);
             this.labelThemeIcon.Name = "labelThemeIcon";
-            this.labelThemeIcon.Size = new System.Drawing.Size(23, 20);
+            this.labelThemeIcon.Size = new System.Drawing.Size(22, 20);
             this.labelThemeIcon.TabIndex = 0;
-            this.labelThemeIcon.Text = "??";
+            this.labelThemeIcon.Text = "☾";
+            // 
+            // btnLogout
+            // 
+            this.btnLogout.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnLogout.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(218)))), ((int)(((byte)(54)))), ((int)(((byte)(51)))));
+            this.btnLogout.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnLogout.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnLogout.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.btnLogout.ForeColor = System.Drawing.Color.White;
+            this.btnLogout.GradientEndColor = System.Drawing.Color.FromArgb(((int)(((byte)(191)))), ((int)(((byte)(38)))), ((int)(((byte)(35)))));
+            this.btnLogout.Location = new System.Drawing.Point(10, 126);
+            this.btnLogout.Name = "btnLogout";
+            this.btnLogout.Padding = new System.Windows.Forms.Padding(0, 0, 0, 2);
+            this.btnLogout.Radius = 12;
+            this.btnLogout.Size = new System.Drawing.Size(196, 42);
+            this.btnLogout.TabIndex = 4;
+            this.btnLogout.Text = "⎋ Terminar sessão";
+            this.btnLogout.UseGradient = true;
+            this.btnLogout.UseVisualStyleBackColor = false;
+            this.btnLogout.Click += new System.EventHandler(this.BtnLogout_Click);
             // 
             // labelUserRole
             // 
@@ -245,9 +269,9 @@
             this.labelUserRole.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(110)))), ((int)(((byte)(118)))), ((int)(((byte)(129)))));
             this.labelUserRole.Location = new System.Drawing.Point(67, 37);
             this.labelUserRole.Name = "labelUserRole";
-            this.labelUserRole.Size = new System.Drawing.Size(83, 15);
+            this.labelUserRole.Size = new System.Drawing.Size(59, 15);
             this.labelUserRole.TabIndex = 2;
-            this.labelUserRole.Text = "Administrador";
+            this.labelUserRole.Text = "Utilizador";
             // 
             // labelUserName
             // 
@@ -257,9 +281,9 @@
             this.labelUserName.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(230)))), ((int)(((byte)(237)))), ((int)(((byte)(243)))));
             this.labelUserName.Location = new System.Drawing.Point(66, 16);
             this.labelUserName.Name = "labelUserName";
-            this.labelUserName.Size = new System.Drawing.Size(75, 19);
+            this.labelUserName.Size = new System.Drawing.Size(39, 19);
             this.labelUserName.TabIndex = 1;
-            this.labelUserName.Text = "Utilizador";
+            this.labelUserName.Text = "Guts";
             // 
             // panelUserAvatar
             // 

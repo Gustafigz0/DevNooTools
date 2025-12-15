@@ -1,13 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
+using DevNooTools.Data;
+using DevNooTools.Forms;
 
 namespace DevNooTools
 {
     internal static class Program
     {
+        public static UserRepository UserRepository { get; private set; }
+
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
@@ -16,7 +17,19 @@ namespace DevNooTools
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Form1());
+            
+            // Initialize user repository
+            UserRepository = new UserRepository();
+
+            // Show login form
+            using (var loginForm = new LoginForm(UserRepository))
+            {
+                if (loginForm.ShowDialog() == DialogResult.OK)
+                {
+                    // User logged in successfully, show main form
+                    Application.Run(new Form1());
+                }
+            }
         }
     }
 }

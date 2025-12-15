@@ -179,8 +179,8 @@ namespace DevNooTools
 
         public static void Attach(Control ctrl, float intensity = 0.08f, Color? hoverColor = null)
         {
-            if (ctrl == null) return;
-            if (_states.ContainsKey(ctrl)) return;
+            if (ctrl == null || _states.ContainsKey(ctrl) || !ShouldAttach(ctrl))
+                return;
 
             var state = new State
             {
@@ -231,7 +231,6 @@ namespace DevNooTools
                 state.Timer.Start();
             };
 
-            // If the control contains children that capture mouse, also attach to them so hover persists when over them
             ctrl.ControlAdded += (s, e) => AttachRecursive(e.Control, intensity, hoverColor);
 
             _states[ctrl] = state;
@@ -239,9 +238,18 @@ namespace DevNooTools
 
         private static void AttachRecursive(Control ctrl, float intensity, Color? hoverColor)
         {
-            Attach(ctrl, intensity, hoverColor);
-            foreach (Control c in ctrl.Controls)
-                AttachRecursive(c, intensity, hoverColor);
+            if (ctrl == null)
+                return;
+
+            if (ShouldAttach(ctrl))
+            {
+                Attach(ctrl, intensity, hoverColor);
+            }
+
+            foreach (Control child in ctrl.Controls)
+            {
+                AttachRecursive(child, intensity, hoverColor);
+            }
         }
 
         public static void AttachToAll(Control root, float intensity = 0.08f)
@@ -249,11 +257,7 @@ namespace DevNooTools
             if (root == null) return;
             foreach (Control c in GetAllControls(root))
             {
-                // attach to buttons and custom interactive controls
-                if (c is Button || c is RoundedButton || c is NavPanel || c is GradientCard || c is RoundedPanel || c is RoundedTextBox || c is ToggleSwitch)
-                {
-                    Attach(c, intensity);
-                }
+                Attach(c, intensity);
             }
         }
 
@@ -277,6 +281,16 @@ namespace DevNooTools
             int bl = (int)(a.B + (b.B - a.B) * t);
             int alpha = (int)(a.A + (b.A - a.A) * t);
             return Color.FromArgb(alpha, r, g, bl);
+        }
+
+        private static bool ShouldAttach(Control ctrl)
+        {
+            return ctrl is RoundedButton
+                || ctrl is Button
+                || ctrl is NavPanel
+                || ctrl is GradientCard
+                || ctrl is RoundedTextBox
+                || ctrl is ToggleSwitch;
         }
     }
 
@@ -572,22 +586,31 @@ namespace DevNooTools
             var rect = new Rectangle(0, 0, Width - 1, Height - 1);
 
             Color bgColor = ThemeManager.IsDarkTheme 
-                ? Color.FromArgb(22, 27, 34) 
-                : Color.FromArgb(246, 248, 250);
+                ? Color.FromArgb(28, 34, 44) 
+                : Color.FromArgb(248, 250, 253);
             
             if (_isHovering)
             {
-                bgColor = ThemeManager.BgHover;
+                float lighten = ThemeManager.IsDarkTheme ? 0.08f : 0.04f;
+                bgColor = RoundedHelper.LightenColor(bgColor, lighten);
             }
+
+            Color borderColor = ThemeManager.IsDarkTheme
+                ? Color.FromArgb(70, 82, 97)
+                : Color.FromArgb(210, 216, 225);
 
             using (var path = RoundedHelper.CreateRoundedRectangle(rect, _radius))
             {
-                using (var brush = new SolidBrush(bgColor))
+                using (var brush = new LinearGradientBrush(
+                    rect,
+                    RoundedHelper.LightenColor(bgColor, ThemeManager.IsDarkTheme ? 0.12f : 0.05f),
+                    bgColor,
+                    LinearGradientMode.Vertical))
                 {
                     e.Graphics.FillPath(brush, path);
                 }
 
-                using (var pen = new Pen(ThemeManager.BorderDefault, 1f))
+                using (var pen = new Pen(borderColor, 1f))
                 {
                     e.Graphics.DrawPath(pen, path);
                 }
@@ -914,6 +937,20 @@ namespace DevNooTools
         {
             add { if (_textBox != null) _textBox.TextChanged += value; }
             remove { if (_textBox != null) _textBox.TextChanged -= value; }
+        }
+
+        public new event KeyEventHandler KeyDown
+        {
+            add { if (_textBox != null) _textBox.KeyDown += value; }
+            remove { if (_textBox != null) _textBox.KeyDown -= value; }
+        }
+
+        public void SetPasswordMode(bool isPassword)
+        {
+            if (_textBox != null)
+            {
+                _textBox.UseSystemPasswordChar = isPassword;
+            }
         }
 
         public RoundedTextBox()
@@ -1909,12 +1946,501 @@ namespace DevNooTools
                     string label = $"{kv.Key} ({kv.Value})";
                     using (var brush = new SolidBrush(ThemeManager.TextPrimary))
                     {
-                        g.DrawString(label, new Font(this.Font.FontFamily, 9f), brush, new PointF(legendX + boxSize + 8, legendY + idx * 20));
+                        g.DrawString(label, new Font("Segoe UI", 9F), brush, new PointF(legendX + boxSize + 8, legendY + idx * 20));
                     }
 
                     idx++;
                 }
             }
+        }
+    }
+
+    #endregion
+
+    #region Modern Title Bar
+
+    public class ModernTitleBar : Panel
+    {
+        private Form _parentForm;
+        private Label _titleLabel;
+        private Label _iconLabel;
+        private Panel _buttonContainer;
+        private TitleBarButton _btnMinimize;
+        private TitleBarButton _btnMaximize;
+        private TitleBarButton _btnClose;
+        
+        private bool _isDragging = false;
+        private Point _dragStart;
+        private bool _showIcon = true;
+        private bool _showMinimize = true;
+        private bool _showMaximize = true;
+
+        public string Title
+        {
+            get => _titleLabel?.Text ?? "";
+            set { if (_titleLabel != null) _titleLabel.Text = value; }
+        }
+
+        public string IconText
+        {
+            get => _iconLabel?.Text ?? "";
+            set { if (_iconLabel != null) _iconLabel.Text = value; }
+        }
+
+        public bool ShowIcon
+        {
+            get => _showIcon;
+            set { _showIcon = value; if (_iconLabel != null) _iconLabel.Visible = value; UpdateLayout(); }
+        }
+
+        public bool ShowMinimize
+        {
+            get => _showMinimize;
+            set { _showMinimize = value; if (_btnMinimize != null) _btnMinimize.Visible = value; }
+        }
+
+        public bool ShowMaximize
+        {
+            get => _showMaximize;
+            set { _showMaximize = value; if (_btnMaximize != null) _btnMaximize.Visible = value; }
+        }
+
+        public ModernTitleBar()
+        {
+            DoubleBuffered = true;
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+            
+            Height = 36;
+            Dock = DockStyle.Top;
+            BackColor = ThemeManager.BgPrimary;
+            Padding = new Padding(8, 0, 0, 0);
+
+            // Icon label
+            _iconLabel = new Label
+            {
+                Text = "???",
+                Font = new Font("Segoe UI Emoji", 12F),
+                ForeColor = ThemeManager.AccentBlue,
+                BackColor = Color.Transparent,
+                AutoSize = false,
+                Size = new Size(28, 36),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Cursor = Cursors.Default
+            };
+            _iconLabel.MouseDown += TitleBar_MouseDown;
+            _iconLabel.MouseMove += TitleBar_MouseMove;
+            _iconLabel.MouseUp += TitleBar_MouseUp;
+            Controls.Add(_iconLabel);
+
+            // Title label
+            _titleLabel = new Label
+            {
+                Text = "DevNooTools",
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                ForeColor = ThemeManager.TextPrimary,
+                BackColor = Color.Transparent,
+                AutoSize = false,
+                Height = 36,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Cursor = Cursors.Default
+            };
+            _titleLabel.MouseDown += TitleBar_MouseDown;
+            _titleLabel.MouseMove += TitleBar_MouseMove;
+            _titleLabel.MouseUp += TitleBar_MouseUp;
+            Controls.Add(_titleLabel);
+
+            // Button container
+            _buttonContainer = new Panel
+            {
+                BackColor = Color.Transparent,
+                Height = 36,
+                Dock = DockStyle.Right,
+                Width = 138
+            };
+            Controls.Add(_buttonContainer);
+
+            // Minimize button
+            _btnMinimize = new TitleBarButton
+            {
+                ButtonType = TitleBarButtonType.Minimize,
+                Size = new Size(46, 36),
+                Location = new Point(0, 0)
+            };
+            _btnMinimize.Click += (s, e) => { if (_parentForm != null) _parentForm.WindowState = FormWindowState.Minimized; };
+            _buttonContainer.Controls.Add(_btnMinimize);
+
+            // Maximize button
+            _btnMaximize = new TitleBarButton
+            {
+                ButtonType = TitleBarButtonType.Maximize,
+                Size = new Size(46, 36),
+                Location = new Point(46, 0)
+            };
+            _btnMaximize.Click += BtnMaximize_Click;
+            _buttonContainer.Controls.Add(_btnMaximize);
+
+            // Close button
+            _btnClose = new TitleBarButton
+            {
+                ButtonType = TitleBarButtonType.Close,
+                Size = new Size(46, 36),
+                Location = new Point(92, 0)
+            };
+            _btnClose.Click += (s, e) => _parentForm?.Close();
+            _buttonContainer.Controls.Add(_btnClose);
+
+            // Drag events on this panel
+            this.MouseDown += TitleBar_MouseDown;
+            this.MouseMove += TitleBar_MouseMove;
+            this.MouseUp += TitleBar_MouseUp;
+            this.MouseDoubleClick += TitleBar_MouseDoubleClick;
+        }
+
+        private void BtnMaximize_Click(object sender, EventArgs e)
+        {
+            if (_parentForm == null) return;
+
+            if (_parentForm.WindowState == FormWindowState.Maximized)
+            {
+                _parentForm.WindowState = FormWindowState.Normal;
+                _btnMaximize.ButtonType = TitleBarButtonType.Maximize;
+            }
+            else
+            {
+                _parentForm.WindowState = FormWindowState.Maximized;
+                _btnMaximize.ButtonType = TitleBarButtonType.Restore;
+            }
+            _btnMaximize.Invalidate();
+        }
+
+        private void TitleBar_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            if (_showMaximize && e.Button == MouseButtons.Left)
+            {
+                BtnMaximize_Click(sender, e);
+            }
+        }
+
+        private void TitleBar_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                _isDragging = true;
+                _dragStart = e.Location;
+
+                // Se clicar em control filho, converte coordenadas
+                if (sender != this)
+                {
+                    var ctrl = sender as Control;
+                    _dragStart = ctrl.PointToScreen(e.Location);
+                    _dragStart = this.PointToClient(_dragStart);
+                }
+            }
+        }
+
+        private void TitleBar_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (_isDragging && _parentForm != null)
+            {
+                // Se maximizado, restaura antes de mover
+                if (_parentForm.WindowState == FormWindowState.Maximized)
+                {
+                    _parentForm.WindowState = FormWindowState.Normal;
+                    _btnMaximize.ButtonType = TitleBarButtonType.Maximize;
+                    _btnMaximize.Invalidate();
+                    
+                    // Reposiciona para que o mouse fique no centro da barra
+                    _dragStart = new Point(_parentForm.Width / 2, Height / 2);
+                }
+
+                Point currentPos = e.Location;
+                if (sender != this)
+                {
+                    var ctrl = sender as Control;
+                    currentPos = ctrl.PointToScreen(e.Location);
+                    currentPos = this.PointToClient(currentPos);
+                }
+
+                _parentForm.Location = new Point(
+                    _parentForm.Location.X + currentPos.X - _dragStart.X,
+                    _parentForm.Location.Y + currentPos.Y - _dragStart.Y);
+            }
+        }
+
+        private void TitleBar_MouseUp(object sender, MouseEventArgs e)
+        {
+            _isDragging = false;
+        }
+
+        protected override void OnParentChanged(EventArgs e)
+        {
+            base.OnParentChanged(e);
+            _parentForm = this.FindForm();
+            if (_parentForm != null)
+            {
+                _parentForm.Resize += ParentForm_Resize;
+            }
+            UpdateLayout();
+        }
+
+        private void ParentForm_Resize(object sender, EventArgs e)
+        {
+            if (_parentForm.WindowState == FormWindowState.Maximized)
+            {
+                _btnMaximize.ButtonType = TitleBarButtonType.Restore;
+            }
+            else
+            {
+                _btnMaximize.ButtonType = TitleBarButtonType.Maximize;
+            }
+            _btnMaximize.Invalidate();
+        }
+
+        protected override void OnResize(EventArgs eventargs)
+        {
+            base.OnResize(eventargs);
+            UpdateLayout();
+        }
+
+        private void UpdateLayout()
+        {
+            int x = 8;
+            
+            if (_iconLabel != null && _showIcon)
+            {
+                _iconLabel.Location = new Point(x, 0);
+                x += _iconLabel.Width + 4;
+            }
+
+            if (_titleLabel != null)
+            {
+                _titleLabel.Location = new Point(x, 0);
+                _titleLabel.Width = Width - x - _buttonContainer.Width - 8;
+            }
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            
+            using (var brush = new SolidBrush(BackColor))
+            {
+                e.Graphics.FillRectangle(brush, ClientRectangle);
+            }
+
+            // Linha sutil no bottom
+            using (var pen = new Pen(ThemeManager.BorderDefault, 1))
+            {
+                e.Graphics.DrawLine(pen, 0, Height - 1, Width, Height - 1);
+            }
+        }
+
+        public void ApplyTheme()
+        {
+            BackColor = ThemeManager.BgPrimary;
+            if (_titleLabel != null) _titleLabel.ForeColor = ThemeManager.TextPrimary;
+            if (_iconLabel != null) _iconLabel.ForeColor = ThemeManager.AccentBlue;
+            _btnMinimize?.Invalidate();
+            _btnMaximize?.Invalidate();
+            _btnClose?.Invalidate();
+            Invalidate();
+        }
+    }
+
+    public enum TitleBarButtonType
+    {
+        Minimize,
+        Maximize,
+        Restore,
+        Close
+    }
+
+    public class TitleBarButton : Control
+    {
+        private TitleBarButtonType _buttonType = TitleBarButtonType.Close;
+        private bool _isHovering = false;
+        private bool _isPressed = false;
+        private float _hoverProgress = 0f;
+        private Timer _hoverTimer;
+
+        public TitleBarButtonType ButtonType
+        {
+            get => _buttonType;
+            set { _buttonType = value; Invalidate(); }
+        }
+
+        public TitleBarButton()
+        {
+            DoubleBuffered = true;
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
+                     ControlStyles.SupportsTransparentBackColor, true);
+            
+            Size = new Size(46, 36);
+            BackColor = Color.Transparent;
+            Cursor = Cursors.Default;
+
+            _hoverTimer = new Timer { Interval = 16 };
+            _hoverTimer.Tick += HoverTimer_Tick;
+        }
+
+        private void HoverTimer_Tick(object sender, EventArgs e)
+        {
+            float target = _isHovering ? 1f : 0f;
+            float diff = target - _hoverProgress;
+
+            if (Math.Abs(diff) < 0.05f)
+            {
+                _hoverProgress = target;
+                if (!_isHovering && _hoverProgress == 0f) _hoverTimer.Stop();
+            }
+            else
+            {
+                _hoverProgress += diff * 0.25f;
+            }
+            Invalidate();
+        }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            base.OnMouseEnter(e);
+            _isHovering = true;
+            _hoverTimer.Start();
+            Invalidate();
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            _isHovering = false;
+            _isPressed = false;
+            _hoverTimer.Start();
+            Invalidate();
+        }
+
+        protected override void OnMouseDown(MouseEventArgs e)
+        {
+            base.OnMouseDown(e);
+            _isPressed = true;
+            Invalidate();
+        }
+
+        protected override void OnMouseUp(MouseEventArgs e)
+        {
+            base.OnMouseUp(e);
+            _isPressed = false;
+            Invalidate();
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+            // Clear with parent background
+            Color clearColor = RoundedHelper.GetActualParentBackColor(this);
+            using (var clearBrush = new SolidBrush(clearColor))
+            {
+                e.Graphics.FillRectangle(clearBrush, ClientRectangle);
+            }
+
+            // Determine hover/press colors
+            Color hoverBg = _buttonType == TitleBarButtonType.Close 
+                ? Color.FromArgb(232, 17, 35) 
+                : ThemeManager.BgHover;
+
+            Color pressBg = _buttonType == TitleBarButtonType.Close 
+                ? Color.FromArgb(200, 17, 35) 
+                : RoundedHelper.DarkenColor(ThemeManager.BgHover, 0.1f);
+
+            // Draw background
+            if (_hoverProgress > 0)
+            {
+                Color bgColor = _isPressed ? pressBg : hoverBg;
+                int alpha = (int)(255 * _hoverProgress);
+                using (var brush = new SolidBrush(Color.FromArgb(alpha, bgColor)))
+                {
+                    e.Graphics.FillRectangle(brush, ClientRectangle);
+                }
+            }
+
+            // Draw icon
+            Color iconColor = ThemeManager.TextSecondary;
+            if (_isHovering && _buttonType == TitleBarButtonType.Close)
+            {
+                iconColor = Color.White;
+            }
+            else if (_isHovering)
+            {
+                iconColor = ThemeManager.TextPrimary;
+            }
+
+            DrawButtonIcon(e.Graphics, iconColor);
+        }
+
+        private void DrawButtonIcon(Graphics g, Color color)
+        {
+            int centerX = Width / 2;
+            int centerY = Height / 2;
+            int size = 10;
+
+            using (var pen = new Pen(color, 1.2f))
+            {
+                pen.StartCap = LineCap.Round;
+                pen.EndCap = LineCap.Round;
+
+                switch (_buttonType)
+                {
+                    case TitleBarButtonType.Minimize:
+                        // Linha horizontal
+                        g.DrawLine(pen, centerX - size / 2, centerY, centerX + size / 2, centerY);
+                        break;
+
+                    case TitleBarButtonType.Maximize:
+                        // Quadrado
+                        var rect = new Rectangle(centerX - size / 2, centerY - size / 2, size, size);
+                        g.DrawRectangle(pen, rect);
+                        break;
+
+                    case TitleBarButtonType.Restore:
+                        // Dois quadrados sobrepostos
+                        int smallSize = size - 2;
+                        var backRect = new Rectangle(centerX - size / 2 + 2, centerY - size / 2, smallSize, smallSize);
+                        var frontRect = new Rectangle(centerX - size / 2, centerY - size / 2 + 2, smallSize, smallSize);
+                        
+                        // Back rectangle (parcial)
+                        g.DrawLine(pen, backRect.Left, backRect.Bottom - 2, backRect.Left, backRect.Top);
+                        g.DrawLine(pen, backRect.Left, backRect.Top, backRect.Right, backRect.Top);
+                        g.DrawLine(pen, backRect.Right, backRect.Top, backRect.Right, backRect.Bottom - 2);
+                        
+                        // Front rectangle
+                        using (var bgBrush = new SolidBrush(RoundedHelper.GetActualParentBackColor(this)))
+                        {
+                            if (_isHovering)
+                            {
+                                Color hoverBg = _buttonType == TitleBarButtonType.Close 
+                                    ? Color.FromArgb(232, 17, 35) 
+                                    : ThemeManager.BgHover;
+                                bgBrush.Color = hoverBg;
+                            }
+                            g.FillRectangle(bgBrush, frontRect);
+                        }
+                        g.DrawRectangle(pen, frontRect);
+                        break;
+
+                    case TitleBarButtonType.Close:
+                        // X
+                        g.DrawLine(pen, centerX - size / 2, centerY - size / 2, centerX + size / 2, centerY + size / 2);
+                        g.DrawLine(pen, centerX + size / 2, centerY - size / 2, centerX - size / 2, centerY + size / 2);
+                        break;
+                }
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) _hoverTimer?.Dispose();
+            base.Dispose(disposing);
         }
     }
 

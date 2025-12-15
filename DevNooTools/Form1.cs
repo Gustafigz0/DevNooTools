@@ -1,4 +1,4 @@
-using System;
+Ôªøusing System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -9,12 +9,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using DevNooTools.Data;
+using DevNooTools.Forms;
+using DevNooTools.Models;
 
 namespace DevNooTools
 {
     public partial class Form1 : Form
     {
-        private ProductRepository repository;
         private BindingList<Product> products;
         private List<Product> allProducts;
         
@@ -31,12 +33,20 @@ namespace DevNooTools
         private RoundedPanel panelPieChart;
         private PieChart pieChart;
 
+        private RoundedTextBox textSearch;
+        private Label labelSearchPlaceholder;
+        private bool userAreaResizeHooked;
+        private bool themeRowLayoutHooked;
+        private bool btnLogoutEventsHooked;
+        private string currentSearchTerm = "";
+
         public Form1()
         {
             // Start with dark theme
             ThemeManager.IsDarkTheme = true;
             
             InitializeComponent();
+            
             this.Load += Form1_Load;
             
             // Subscribe to theme toggle
@@ -72,6 +82,21 @@ namespace DevNooTools
                 lblNavProducts.Click += PanelNavProducts_Click;
             }
             catch { /* designer fields may not be initialized in some contexts */ }
+
+            // Update user info from logged in user
+            UpdateUserInfo();
+        }
+
+        private void UpdateUserInfo()
+        {
+            var user = Program.UserRepository?.CurrentUser;
+            if (user != null)
+            {
+                if (labelUserName != null)
+                    labelUserName.Text = user.DisplayName ?? user.Username;
+                if (labelUserRole != null)
+                    labelUserRole.Text = user.Role ?? "Utilizador";
+            }
         }
 
         private void SetupPieChart()
@@ -95,7 +120,7 @@ namespace DevNooTools
                 { 
                     Dock = DockStyle.Fill,
                     BackColor = ThemeManager.BgCard,
-                    Title = "?? PreÁos dos Produtos (Top 8)"
+                    Title = "Top 8 produtos por pre√ßo"
                 };
                 panelChart.Controls.Add(barChart);
                 panelMain.Controls.Add(panelChart);
@@ -250,7 +275,7 @@ namespace DevNooTools
 
             // Update header text
             if (labelTitle != null) labelTitle.Text = "Dashboard";
-            if (labelSubtitle != null) labelSubtitle.Text = "Vis„o geral do invent·rio e mÈtricas r·pidas";
+            if (labelSubtitle != null) labelSubtitle.Text = "Vis√£o geral do invent√°rio e m√©tricas r√°pidas";
 
             // Ensure charts exist and are updated
             SetupPieChart();
@@ -275,7 +300,7 @@ namespace DevNooTools
 
             // Update header text
             if (labelTitle != null) labelTitle.Text = "Produtos";
-            if (labelSubtitle != null) labelSubtitle.Text = "Gerencie seu invent·rio facilmente";
+            if (labelSubtitle != null) labelSubtitle.Text = "Gerencie seu invent√°rio facilmente";
 
             if (panelChart != null) panelChart.Visible = false;
             if (panelPieChart != null) panelPieChart.Visible = false;
@@ -304,6 +329,178 @@ namespace DevNooTools
             }
         }
 
+        private void EnsureUserAreaEnhancements()
+        {
+            if (panelUserArea == null)
+                return;
+
+            if (panelUserArea.Height < 190)
+            {
+                panelUserArea.Height = 190;
+            }
+
+            panelUserArea.Padding = new Padding(0, 8, 0, 12);
+            panelUserArea.Cursor = Cursors.Default;
+
+            if (panelUserAvatar != null)
+            {
+                panelUserAvatar.Visible = false;
+                panelUserAvatar.Enabled = false;
+                panelUserAvatar.Height = 0;
+            }
+
+            if (labelUserRole != null)
+            {
+                labelUserRole.Text = string.Empty;
+                labelUserRole.Visible = false;
+            }
+
+            if (labelUserName != null)
+            {
+                labelUserName.Font = new Font("Segoe UI", 11.5f, FontStyle.Bold);
+            }
+
+            if (btnLogout != null)
+            {
+                btnLogout.Radius = 14;
+                btnLogout.Height = 42;
+                btnLogout.Margin = new Padding(12, 6, 12, 12);
+                btnLogout.Cursor = Cursors.Hand;
+                btnLogout.Font = new Font("Segoe UI", 9.25f, FontStyle.Bold);
+                btnLogout.Text = "‚éã Terminar sess√£o";
+                btnLogout.TextAlign = ContentAlignment.MiddleCenter;
+                btnLogout.Padding = new Padding(0, 0, 0, 2);
+                if (!btnLogoutEventsHooked)
+                {
+                    btnLogout.Click += BtnLogout_Click;
+                    btnLogoutEventsHooked = true;
+                }
+            }
+
+            if (panelThemeRow != null)
+            {
+                panelThemeRow.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
+                panelThemeRow.Height = 42;
+                panelThemeRow.Padding = new Padding(0, 4, 0, 4);
+
+                if (!themeRowLayoutHooked)
+                {
+                    panelThemeRow.Resize += (s, e) => LayoutThemeRow();
+                    themeRowLayoutHooked = true;
+                }
+
+                if (labelThemeIcon != null)
+                {
+                    labelThemeIcon.Font = new Font("Segoe UI Symbol", 11f);
+                }
+
+                if (labelThemeText != null)
+                {
+                    labelThemeText.Font = new Font("Segoe UI", 9f, FontStyle.Regular);
+                }
+            }
+
+            if (!userAreaResizeHooked)
+            {
+                panelUserArea.Resize += (s, e) => LayoutUserAreaControls();
+                userAreaResizeHooked = true;
+            }
+
+            UpdateLogoutButtonTheme();
+            ApplyUserAreaTheme();
+            LayoutUserAreaControls();
+        }
+
+        private void LayoutUserAreaControls()
+        {
+            if (panelUserArea == null)
+                return;
+
+            int cursorY = 12;
+
+            if (labelUserName != null)
+            {
+                labelUserName.Left = 12;
+                labelUserName.Top = cursorY;
+                labelUserName.Width = panelUserArea.Width - 24;
+                cursorY = labelUserName.Bottom + 12;
+            }
+
+            if (panelThemeRow != null)
+            {
+                panelThemeRow.Left = 12;
+                panelThemeRow.Width = panelUserArea.Width - 24;
+                panelThemeRow.Top = cursorY;
+                cursorY = panelThemeRow.Bottom + 14;
+            }
+
+            if (btnLogout != null)
+            {
+                btnLogout.Width = Math.Max(60, panelUserArea.Width - 24);
+                btnLogout.Left = 12;
+                int minimumTop = cursorY;
+                int availableTop = panelUserArea.Height - btnLogout.Height - 12;
+                btnLogout.Top = Math.Max(minimumTop, availableTop);
+            }
+
+            LayoutThemeRow();
+        }
+
+        private void LayoutThemeRow()
+        {
+            if (panelThemeRow == null || toggleTheme == null || labelThemeIcon == null || labelThemeText == null)
+                return;
+
+            labelThemeIcon.Left = 0;
+            labelThemeIcon.Top = Math.Max(0, (panelThemeRow.Height - labelThemeIcon.Height) / 2);
+
+            labelThemeText.Left = labelThemeIcon.Right + 6;
+            labelThemeText.Top = Math.Max(0, (panelThemeRow.Height - labelThemeText.Height) / 2);
+            int spaceForToggle = toggleTheme.Width + 8;
+            labelThemeText.Width = Math.Max(42, panelThemeRow.Width - labelThemeText.Left - spaceForToggle);
+
+            toggleTheme.Left = panelThemeRow.Width - toggleTheme.Width;
+            toggleTheme.Top = Math.Max(0, (panelThemeRow.Height - toggleTheme.Height) / 2);
+        }
+
+        private void ApplyUserAreaTheme()
+        {
+            if (panelThemeRow != null)
+            {
+                panelThemeRow.BackColor = ThemeManager.IsDarkTheme
+                    ? Color.FromArgb(30, 35, 44)
+                    : Color.FromArgb(236, 240, 244);
+                panelThemeRow.Invalidate();
+            }
+
+            if (labelThemeIcon != null)
+                labelThemeIcon.ForeColor = ThemeManager.TextSecondary;
+            if (labelThemeText != null)
+                labelThemeText.ForeColor = ThemeManager.TextSecondary;
+            if (labelUserName != null)
+                labelUserName.ForeColor = ThemeManager.TextPrimary;
+
+            panelUserArea?.Invalidate();
+        }
+
+        private void UpdateLogoutButtonTheme()
+        {
+            if (btnLogout == null)
+                return;
+
+            var start = ThemeManager.IsDarkTheme
+                ? ThemeManager.AccentRed
+                : RoundedHelper.DarkenColor(ThemeManager.AccentRed, 0.05f);
+            var end = ThemeManager.IsDarkTheme
+                ? ThemeManager.AccentRedDark
+                : RoundedHelper.DarkenColor(ThemeManager.AccentRedDark, 0.15f);
+
+            btnLogout.BackColor = start;
+            btnLogout.GradientEndColor = end;
+            btnLogout.ForeColor = Color.White;
+            btnLogout.UseGradient = true;
+        }
+
         private void ToggleTheme_OnToggled(object sender, EventArgs e)
         {
             ThemeManager.ToggleTheme();
@@ -325,6 +522,33 @@ namespace DevNooTools
             {
                 panelPieChart.BackColor = ThemeManager.BgCard;
                 panelPieChart.BorderColor = ThemeManager.BorderDefault;
+            }
+        }
+
+        private void BtnLogout_Click(object sender, EventArgs e)
+        {
+            var confirm = MessageBox.Show("Deseja terminar a sess√£o atual?", "Terminar sess√£o", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (confirm != DialogResult.Yes) return;
+
+            Program.UserRepository?.Logout();
+            RestartSession();
+        }
+
+        private void RestartSession()
+        {
+            Hide();
+            using (var login = new LoginForm(Program.UserRepository))
+            {
+                if (login.ShowDialog() == DialogResult.OK)
+                {
+                    UpdateUserInfo();
+                    ReloadUserData();
+                    Show();
+                }
+                else
+                {
+                    Close();
+                }
             }
         }
 
@@ -363,9 +587,12 @@ namespace DevNooTools
             labelUserRole.ForeColor = ThemeManager.TextMuted;
             labelThemeIcon.ForeColor = ThemeManager.TextSecondary;
             labelThemeText.ForeColor = ThemeManager.TextSecondary;
+
+            ApplyUserAreaTheme();
+            LayoutUserAreaControls();
             
             // Update theme icon based on current theme
-            labelThemeIcon.Text = ThemeManager.IsDarkTheme ? "??" : "??";
+            labelThemeIcon.Text = ThemeManager.IsDarkTheme ? "‚òÄ" : "‚òæ";
             labelThemeText.Text = ThemeManager.IsDarkTheme ? "Tema Claro" : "Tema Escuro";
             
             // Update form panel
@@ -398,6 +625,9 @@ namespace DevNooTools
             textQuantity.ForeColor = ThemeManager.TextPrimary;
             textQuantity.Invalidate();
             
+            UpdateSearchBoxTheme();
+            UpdateSearchPlaceholderVisibility();
+            
             // Update grid panel
             panelGrid.BackColor = ThemeManager.BgPrimary;
             panelGrid.BorderColor = ThemeManager.BorderDefault;
@@ -405,6 +635,7 @@ namespace DevNooTools
             
             // Update DataGridView
             ConfigureDataGridView();
+            UpdateLogoutButtonTheme();
             
             this.ResumeLayout(true);
             
@@ -416,22 +647,15 @@ namespace DevNooTools
         {
             try
             {
-                // Configure DataGridView style
                 ConfigureDataGridView();
+                EnsureUserAreaEnhancements();
+                ReloadUserData();
 
-                repository = new ProductRepository();
-                allProducts = repository.LoadAll();
-                products = new BindingList<Product>(allProducts.ToList());
-                bindingSourceProducts.DataSource = products;
-                
-                UpdateStats();
-                dataGridViewProducts.ClearSelection();
-                ClearFields();
-
-                // Show database location in title bar
-                if (!string.IsNullOrEmpty(repository.DatabasePath))
+                // Show user info in title bar
+                var user = Program.UserRepository?.CurrentUser;
+                if (user != null)
                 {
-                    this.Text = $"DevNooTools - Dados: {repository.DatabasePath}";
+                    this.Text = $"DevNooTools - {user.DisplayName} ({user.Role})";
                 }
 
                 // Start fade-in animation
@@ -446,16 +670,10 @@ namespace DevNooTools
                 }
                 catch { }
 
-                // Always start on Dashboard - hide product panels first
-                panelForm.Visible = false;
-                panelGrid.Visible = false;
-                panelCards.Visible = true;
-                
-                // Setup chart after panels are configured
-                SetupPieChart();
+                // Setup search functionality
+                SetupSearch();
 
-                // Now apply full dashboard state
-                ShowDashboard();
+                UpdateUserInfo();
             }
             catch (Exception ex)
             {
@@ -464,6 +682,123 @@ namespace DevNooTools
                 products = new BindingList<Product>();
                 bindingSourceProducts.DataSource = products;
             }
+        }
+
+        private void SetupSearch()
+        {
+            if (panelHeader == null || textSearch != null)
+                return;
+
+            textSearch = new RoundedTextBox
+            {
+                Size = new Size(260, 36),
+                Radius = 8,
+                BackColor = ThemeManager.BgInput,
+                ForeColor = ThemeManager.TextPrimary,
+                BorderColor = ThemeManager.BorderDefault,
+                FocusBorderColor = ThemeManager.AccentBlue,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            textSearch.TextChanged += TextSearch_TextChanged;
+
+            labelSearchPlaceholder = new Label
+            {
+                Text = "\U0001F50D Pesquisar produtos...",
+                AutoSize = false,
+                Height = 18,
+                ForeColor = ThemeManager.TextMuted,
+                BackColor = Color.Transparent,
+                Cursor = Cursors.IBeam,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            labelSearchPlaceholder.Click += (s, e) => textSearch.Focus();
+
+            panelHeader.Controls.Add(textSearch);
+            panelHeader.Controls.Add(labelSearchPlaceholder);
+            labelSearchPlaceholder.BringToFront();
+
+            panelHeader.Resize += PanelHeader_Resize;
+
+            PositionSearchControls();
+            UpdateSearchBoxTheme();
+            UpdateSearchPlaceholderVisibility();
+        }
+
+        private void PanelHeader_Resize(object sender, EventArgs e) => PositionSearchControls();
+
+        private void PositionSearchControls()
+        {
+            if (panelHeader == null || textSearch == null)
+                return;
+
+            int margin = 16;
+            int width = Math.Min(320, Math.Max(220, panelHeader.Width / 3));
+            int left = Math.Max(margin, panelHeader.Width - width - margin);
+
+            textSearch.Size = new Size(width, textSearch.Height);
+            textSearch.Location = new Point(left, 12);
+
+            if (labelSearchPlaceholder != null)
+            {
+                labelSearchPlaceholder.Width = width - 24;
+                labelSearchPlaceholder.Location = new Point(left + 12, textSearch.Top + (textSearch.Height - labelSearchPlaceholder.Height) / 2);
+            }
+        }
+
+        private void UpdateSearchPlaceholderVisibility()
+        {
+            if (labelSearchPlaceholder == null || textSearch == null)
+                return;
+
+            labelSearchPlaceholder.Visible = string.IsNullOrEmpty(textSearch.Text);
+            labelSearchPlaceholder.ForeColor = ThemeManager.TextMuted;
+        }
+
+        private void UpdateSearchBoxTheme()
+        {
+            if (textSearch == null)
+                return;
+
+            textSearch.BackColor = ThemeManager.BgInput;
+            textSearch.BorderColor = ThemeManager.BorderDefault;
+            textSearch.ForeColor = ThemeManager.TextPrimary;
+            textSearch.FocusBorderColor = ThemeManager.AccentBlue;
+            textSearch.Invalidate();
+
+            if (labelSearchPlaceholder != null)
+            {
+                labelSearchPlaceholder.ForeColor = ThemeManager.TextMuted;
+            }
+        }
+
+        private void TextSearch_TextChanged(object sender, EventArgs e)
+        {
+            currentSearchTerm = textSearch.Text.Trim().ToLower();
+            UpdateSearchPlaceholderVisibility();
+            FilterProducts();
+        }
+
+        private void FilterProducts()
+        {
+            if (string.IsNullOrWhiteSpace(currentSearchTerm))
+            {
+                products.Clear();
+                foreach (var p in allProducts)
+                    products.Add(p);
+            }
+            else
+            {
+                var filtered = allProducts.Where(p =>
+                    (p.Name?.ToLower().Contains(currentSearchTerm) ?? false) ||
+                    (p.Description?.ToLower().Contains(currentSearchTerm) ?? false)
+                ).ToList();
+
+                products.Clear();
+                foreach (var p in filtered)
+                    products.Add(p);
+            }
+            
+            dataGridViewProducts.ClearSelection();
         }
 
         private void ConfigureDataGridView()
@@ -512,7 +847,7 @@ namespace DevNooTools
             
             // Total value in stock (Euro)
             decimal totalValue = allProducts.Sum(p => p.Price * p.Quantity);
-            labelCardValueValue.Text = totalValue.ToString("N2", EuroCulture) + " Ä";
+            labelCardValueValue.Text = totalValue.ToString("N2", EuroCulture) + " ‚Ç¨";
             
             // Low stock (quantity <= 5)
             int lowStock = allProducts.Count(p => p.Quantity <= 5);
@@ -598,7 +933,7 @@ namespace DevNooTools
         {
             if (string.IsNullOrWhiteSpace(textName.Text))
             {
-                ShowMessage("Nome È obrigatÛrio.", "ValidaÁ„o", MessageBoxIcon.Warning);
+                ShowMessage("Nome √© obrigat√≥rio.", "Valida√ß√£o", MessageBoxIcon.Warning);
                 textName.Focus();
                 return;
             }
@@ -608,14 +943,14 @@ namespace DevNooTools
 
             if (price < 0)
             {
-                ShowMessage("PreÁo n„o pode ser negativo.", "ValidaÁ„o", MessageBoxIcon.Warning);
+                ShowMessage("Pre√ßo n√£o pode ser negativo.", "Valida√ß√£o", MessageBoxIcon.Warning);
                 textPrice.Focus();
                 return;
             }
 
             if (qty < 0)
             {
-                ShowMessage("Quantidade n„o pode ser negativa.", "ValidaÁ„o", MessageBoxIcon.Warning);
+                ShowMessage("Quantidade n√£o pode ser negativa.", "Valida√ß√£o", MessageBoxIcon.Warning);
                 textQuantity.Focus();
                 return;
             }
@@ -659,7 +994,7 @@ namespace DevNooTools
 
             if (string.IsNullOrWhiteSpace(textName.Text))
             {
-                ShowMessage("Nome È obrigatÛrio.", "ValidaÁ„o", MessageBoxIcon.Warning);
+                ShowMessage("Nome √© obrigat√≥rio.", "Valida√ß√£o", MessageBoxIcon.Warning);
                 textName.Focus();
                 return;
             }
@@ -669,14 +1004,14 @@ namespace DevNooTools
 
             if (price < 0)
             {
-                ShowMessage("PreÁo n„o pode ser negativo.", "ValidaÁ„o", MessageBoxIcon.Warning);
+                ShowMessage("Pre√ßo n√£o pode ser negativo.", "Valida√ß√£o", MessageBoxIcon.Warning);
                 textPrice.Focus();
                 return;
             }
 
             if (qty < 0)
             {
-                ShowMessage("Quantidade n„o pode ser negativa.", "ValidaÁ„o", MessageBoxIcon.Warning);
+                ShowMessage("Quantidade n√£o pode ser negativa.", "Valida√ß√£o", MessageBoxIcon.Warning);
                 textQuantity.Focus();
                 return;
             }
@@ -705,8 +1040,8 @@ namespace DevNooTools
             }
 
             var res = MessageBox.Show(
-                $"Tem certeza que deseja excluir o produto '{cur.Name}'?\n\nEsta aÁ„o n„o pode ser desfeita.",
-                "Confirmar Exclus„o",
+                $"Tem certeza que deseja excluir o produto '{cur.Name}'?\n\nEsta a√ß√£o n√£o pode ser desfeita.",
+                "Confirmar Exclus√£o",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question,
                 MessageBoxDefaultButton.Button2);
@@ -720,7 +1055,7 @@ namespace DevNooTools
                 UpdateStats();
                 ClearFields();
                 AnimatePanelPulse(panelGrid);
-                ShowMessage("Produto excluÌdo com sucesso!", "Sucesso", MessageBoxIcon.Information);
+                ShowMessage("Produto exclu√≠do com sucesso!", "Sucesso", MessageBoxIcon.Information);
             }
         }
 
@@ -757,7 +1092,7 @@ namespace DevNooTools
         {
             try
             {
-                repository.SaveAll(allProducts);
+                Program.UserRepository?.SaveUserProducts(allProducts);
             }
             catch (Exception ex)
             {
@@ -785,7 +1120,7 @@ namespace DevNooTools
                 return 0m;
 
             // Remove currency symbols
-            text = text.Replace("EUR", "").Replace("Ä", "").Replace("E", "").Replace("$", "").Trim();
+            text = text.Replace("EUR", "").Replace("‚Ç¨", "").Replace("E", "").Replace("$", "").Trim();
 
             // Try parsing with Euro culture first (uses comma as decimal separator)
             if (decimal.TryParse(text, NumberStyles.Any, EuroCulture, out var val))
@@ -807,6 +1142,21 @@ namespace DevNooTools
                 return val;
 
             return 0;
+        }
+
+        private void ReloadUserData()
+        {
+            allProducts = Program.UserRepository?.GetUserProducts() ?? new List<Product>();
+            products = new BindingList<Product>(new List<Product>(allProducts));
+            bindingSourceProducts.DataSource = products;
+            bindingSourceProducts.ResetBindings(false);
+
+            UpdateStats();
+            dataGridViewProducts?.ClearSelection();
+            ClearFields();
+
+            SetupPieChart();
+            ShowDashboard();
         }
     }
 }
