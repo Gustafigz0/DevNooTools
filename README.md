@@ -98,10 +98,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
 
-## 👤 Author
-
-**Gustafigz0**
-- GitHub: [@Gustafigz0](https://github.com/Gustafigz0)
 
 ## 🔗 Links
 
